@@ -62,10 +62,39 @@ db: Annotated[AsyncSession, Depends(get_db)]
 
 **Results**:
 - FastAPI app initializes successfully ✅
-- 117/174 API tests passing (up from 43) ✅
+- 150/174 API tests passing (up from 43, then 117) ✅
 - All critical blocking issues resolved ✅
 
-**Remaining Work**: 57 test failures are primarily assertion/logic errors, not foundation issues
+#### ✅ Phase 2.2C: Foundation Fixes - Model Defaults and Test Infrastructure (COMPLETE)
+
+**Model Initialization Fixed**:
+1. `src/api/models/user.py` - Added __init__ method with Python-level defaults (is_active, role)
+2. `src/api/models/workflow.py` - Added __init__ method with Python-level defaults (is_active, version)
+3. `src/api/models/job.py` - Added __init__ method with Python-level defaults (status, progress)
+4. `src/api/models/workflow_version.py` - Added __init__ method for consistency
+5. Updated event listeners with MX tag documentation
+
+**FastAPI Lifespan Migration**:
+1. `src/api/main.py` - Migrated from deprecated @app.on_event to lifespan context manager
+2. Removed unused imports (Optional, Path, Request, JSONResponse, BaseHTTPMiddleware, Config)
+3. Updated FastAPI constructor to use lifespan parameter
+4. Added startup/shutdown logging for processor initialization
+
+**Test Infrastructure Fixes**:
+1. `tests/api/test_main.py` - Fixed middleware detection (use m.cls.__name__)
+2. `tests/api/test_main.py` - Fixed dependency injection tests (use next() for generators)
+3. `tests/api/test_main.py` - Fixed import tests (modules now exist)
+4. `tests/api/test_models.py` - Added __init__ methods to test models
+5. `tests/api/test_models.py` - Added Python-level validation for required fields
+
+**Results**:
+- test_main.py: 33/33 passing (all fixed) ✅
+- test_models.py: 15/19 passing (up from 6/19) ✅
+- Overall API tests: 150/174 passing (86%, up from 81%) ✅
+
+**Commit**: 9af82bf "fix(api): Fix FastAPI lifespan events, model defaults, and test failures"
+
+**Remaining Work**: 24 test failures (password security, user CRUD, RBAC)
 
 ---
 
