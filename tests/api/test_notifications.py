@@ -218,9 +218,7 @@ class TestJobStatusTracking:
     async def test_completion_notification_sent(self):
         """Test that completion notification is sent."""
         from src.api.services.job import JobService
-        from src.api.services.notification import NotificationService
         from src.api.models.job import Job, JobStatus
-        from unittest.mock import MagicMock
 
         mock_db = AsyncMock()
 
@@ -252,7 +250,9 @@ class TestJobStatusTracking:
         job_service = JobService(mock_db)
 
         # Mock notification service
-        with patch('src.api.services.notification.get_notification_service') as mock_get_service:
+        with patch(
+            "src.api.services.notification.get_notification_service"
+        ) as mock_get_service:
             mock_notification_service = AsyncMock()
             mock_get_service.return_value = mock_notification_service
 
@@ -261,7 +261,7 @@ class TestJobStatusTracking:
                 mock_job.id,
                 JobStatus.completed,
                 progress=100.0,
-                result={"row_count": 5000}
+                result={"row_count": 5000},
             )
 
             # Verify notification was called
@@ -282,9 +282,7 @@ class TestNotificationRetrieval:
         user_id = 1
         for i in range(3):
             await notification_service.send_progress_update(
-                Mock(id=str(uuid4()), created_by=user_id),
-                Mock(id=user_id),
-                i * 25.0
+                Mock(id=str(uuid4()), created_by=user_id), Mock(id=user_id), i * 25.0
             )
 
         # Get notifications

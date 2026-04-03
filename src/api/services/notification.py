@@ -33,11 +33,7 @@ class NotificationService:
         self._notifications: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
         self._hooks: Dict[str, List[callable]] = defaultdict(list)
 
-    async def send_completion_notification(
-        self,
-        job: Any,
-        user: Any
-    ) -> None:
+    async def send_completion_notification(self, job: Any, user: Any) -> None:
         """
         Send job completion notification.
 
@@ -56,7 +52,7 @@ class NotificationService:
             "progress": job.progress,
             "result": job.result,
             "created_at": datetime.utcnow().isoformat(),
-            "read": False
+            "read": False,
         }
 
         # Store notification
@@ -65,11 +61,7 @@ class NotificationService:
         # Trigger hooks
         await self._trigger_hooks("job_completed", notification, user)
 
-    async def send_failure_notification(
-        self,
-        job: Any,
-        user: Any
-    ) -> None:
+    async def send_failure_notification(self, job: Any, user: Any) -> None:
         """
         Send job failure notification.
 
@@ -86,7 +78,7 @@ class NotificationService:
             "progress": job.progress,
             "error": job.error_message,
             "created_at": datetime.utcnow().isoformat(),
-            "read": False
+            "read": False,
         }
 
         # Store notification
@@ -95,12 +87,7 @@ class NotificationService:
         # Trigger hooks
         await self._trigger_hooks("job_failed", notification, user)
 
-    async def send_progress_update(
-        self,
-        job: Any,
-        user: Any,
-        progress: float
-    ) -> None:
+    async def send_progress_update(self, job: Any, user: Any, progress: float) -> None:
         """
         Send job progress update notification.
 
@@ -116,7 +103,7 @@ class NotificationService:
             "workflow_id": job.workflow_id,
             "progress": progress,
             "created_at": datetime.utcnow().isoformat(),
-            "read": False
+            "read": False,
         }
 
         # Store notification
@@ -126,9 +113,7 @@ class NotificationService:
         await self._trigger_hooks("job_progress", notification, user)
 
     def get_notifications(
-        self,
-        user_id: int,
-        limit: Optional[int] = None
+        self, user_id: int, limit: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         Retrieve notifications for a user.
@@ -144,9 +129,7 @@ class NotificationService:
 
         # Sort by created_at descending
         notifications = sorted(
-            notifications,
-            key=lambda n: n["created_at"],
-            reverse=True
+            notifications, key=lambda n: n["created_at"], reverse=True
         )
 
         if limit:
@@ -194,10 +177,7 @@ class NotificationService:
         self._hooks[event_type].append(callback)
 
     async def _trigger_hooks(
-        self,
-        event_type: str,
-        notification: Dict[str, Any],
-        user: Any
+        self, event_type: str, notification: Dict[str, Any], user: Any
     ) -> None:
         """
         Trigger all registered hooks for an event type.
@@ -212,8 +192,7 @@ class NotificationService:
         # Execute all hooks concurrently
         if hooks:
             await asyncio.gather(
-                *[hook(notification, user) for hook in hooks],
-                return_exceptions=True
+                *[hook(notification, user) for hook in hooks], return_exceptions=True
             )
 
 
@@ -236,7 +215,4 @@ def get_notification_service() -> NotificationService:
     return _notification_service
 
 
-__all__ = [
-    'NotificationService',
-    'get_notification_service'
-]
+__all__ = ["NotificationService", "get_notification_service"]

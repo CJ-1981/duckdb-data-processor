@@ -8,10 +8,8 @@ Following TDD methodology: RED phase first.
 """
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
-from datetime import datetime
+from unittest.mock import Mock, AsyncMock
 from uuid import uuid4
-from typing import Dict, Any
 
 # These tests will fail until Celery tasks are implemented
 
@@ -28,28 +26,31 @@ class TestWorkflowExecutionTask:
         job_id = str(uuid4())
         workflow_definition = {
             "nodes": [
-                {"id": "node1", "type": "data_source", "config": {"connector": "csv", "path": "data.csv"}},
-                {"id": "node2", "type": "transform", "config": {"operation": "filter", "expression": "age > 18"}}
+                {
+                    "id": "node1",
+                    "type": "data_source",
+                    "config": {"connector": "csv", "path": "data.csv"},
+                },
+                {
+                    "id": "node2",
+                    "type": "transform",
+                    "config": {"operation": "filter", "expression": "age > 18"},
+                },
             ],
-            "edges": [
-                {"source": "node1", "target": "node2"}
-            ]
+            "edges": [{"source": "node1", "target": "node2"}],
         }
 
         # Mock job service
         mock_job_service = AsyncMock()
         mock_job_service.get_job.return_value = Mock(
-            id=job_id,
-            status="pending",
-            workflow_id=123,
-            progress=0.0
+            id=job_id, status="pending", workflow_id=123, progress=0.0
         )
 
         # Mock processor
         mock_processor = AsyncMock()
         mock_processor.execute_workflow.return_value = {
             "row_count": 1000,
-            "output_path": "/tmp/output.parquet"
+            "output_path": "/tmp/output.parquet",
         }
 
         # Execute task (synchronous - Celery tasks are sync functions)
@@ -68,7 +69,7 @@ class TestWorkflowExecutionTask:
         job_id = str(uuid4())
         workflow_definition = {
             "nodes": [{"id": "node1", "type": "data_source", "config": {}}],
-            "edges": []
+            "edges": [],
         }
 
         # Task should fail validation when data source missing path/query
@@ -85,7 +86,7 @@ class TestWorkflowExecutionTask:
         job_id = str(uuid4())
         workflow_definition = {
             "nodes": [{"id": "node1", "type": "data_source", "config": {}}],
-            "edges": []
+            "edges": [],
         }
 
         # Task should complete successfully in test mode (async context)
@@ -108,7 +109,7 @@ class TestExportTask:
         export_config = {
             "format": "parquet",
             "output_path": "/tmp/export.parquet",
-            "query": "SELECT * FROM data"
+            "query": "SELECT * FROM data",
         }
 
         # Mock export processor
@@ -116,7 +117,7 @@ class TestExportTask:
         mock_processor.export_data.return_value = {
             "row_count": 5000,
             "file_size": 1024000,
-            "output_path": "/tmp/export.parquet"
+            "output_path": "/tmp/export.parquet",
         }
 
         result = export_data_task(job_id, export_config)
@@ -133,7 +134,7 @@ class TestExportTask:
         export_config = {
             "format": "invalid_format",
             "output_path": "/tmp/export.dat",
-            "query": "SELECT * FROM data"
+            "query": "SELECT * FROM data",
         }
 
         result = export_data_task(job_id, export_config)
@@ -151,17 +152,15 @@ class TestCeleryConfiguration:
         from src.api.tasks import celery_app
 
         assert celery_app is not None
-        assert celery_app.main == 'duckdb_processor'
+        assert celery_app.main == "duckdb_processor"
 
     def test_task_registration(self):
         """Test that tasks are registered with Celery."""
         from src.api.tasks import celery_app
-        from src.api.tasks.workflow import execute_workflow_task
-        from src.api.tasks.export import export_data_task
 
         # Verify tasks are registered
-        assert 'execute_workflow_task' in dir(celery_app)
-        assert 'export_data_task' in dir(celery_app)
+        assert "execute_workflow_task" in dir(celery_app)
+        assert "export_data_task" in dir(celery_app)
 
     def test_task_configuration(self):
         """Test that task configuration is correct."""
@@ -174,7 +173,7 @@ class TestCeleryConfiguration:
 
         # Verify retry configuration
         assert execute_workflow_task.autoretry_for == (Exception,)
-        assert execute_workflow_task.retry_kwargs == {'max_retries': 3, 'countdown': 60}
+        assert execute_workflow_task.retry_kwargs == {"max_retries": 3, "countdown": 60}
 
         # Verify time limits
         assert execute_workflow_task.time_limit == 3600  # 1 hour
@@ -191,8 +190,10 @@ class TestTaskIntegration:
 
         job_id = str(uuid4())
         workflow_definition = {
-            "nodes": [{"id": "node1", "type": "data_source", "config": {"path": "data.csv"}}],
-            "edges": []
+            "nodes": [
+                {"id": "node1", "type": "data_source", "config": {"path": "data.csv"}}
+            ],
+            "edges": [],
         }
 
         # Execute task (synchronous function, not awaited)
@@ -210,8 +211,10 @@ class TestTaskIntegration:
 
         job_id = str(uuid4())
         workflow_definition = {
-            "nodes": [{"id": "node1", "type": "data_source", "config": {"path": "data.csv"}}],
-            "edges": []
+            "nodes": [
+                {"id": "node1", "type": "data_source", "config": {"path": "data.csv"}}
+            ],
+            "edges": [],
         }
 
         # Execute task (synchronous, not awaited)
@@ -235,7 +238,7 @@ class TestTaskRetryBehavior:
         from src.api.tasks.workflow import execute_workflow_task
 
         # Verify retry configuration is set
-        assert execute_workflow_task.retry_kwargs == {'max_retries': 3, 'countdown': 60}
+        assert execute_workflow_task.retry_kwargs == {"max_retries": 3, "countdown": 60}
         assert execute_workflow_task.autoretry_for == (Exception,)
         assert execute_workflow_task.retry_backoff is True
 
@@ -271,7 +274,7 @@ class TestTaskCancellation:
             "nodes": [
                 {"id": "node1", "type": "data_source", "config": {"path": "data.csv"}}
             ],
-            "edges": []
+            "edges": [],
         }
 
         result = execute_workflow_task(job_id, workflow_definition)
@@ -301,14 +304,15 @@ class TestTaskPriority:
 
         job_id = str(uuid4())
         workflow_definition = {
-            "nodes": [{"id": "node1", "type": "data_source", "config": {"path": "data.csv"}}],
-            "edges": []
+            "nodes": [
+                {"id": "node1", "type": "data_source", "config": {"path": "data.csv"}}
+            ],
+            "edges": [],
         }
 
         # Submit with high priority using apply_async
         result = execute_workflow_task.apply_async(
-            args=[job_id, workflow_definition],
-            priority=9
+            args=[job_id, workflow_definition], priority=9
         )
 
         # Verify task executed

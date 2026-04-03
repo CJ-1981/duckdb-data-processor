@@ -7,34 +7,34 @@ If PostgreSQL is not available, these tests will be skipped.
 
 import pytest
 from unittest.mock import patch, MagicMock
-from typing import Optional
 
 # Try to import PostgreSQL dependencies
 try:
     import psycopg2
     from psycopg2 import pool
+
     PSYCOPG2_AVAILABLE = True
 except ImportError:
     PSYCOPG2_AVAILABLE = False
 
 from src.core.connectors.postgresql import PostgreSQLConnector
-from src.core.connectors.database import DatabaseConnector
 
 
 # ========================================================================
 # Integration Test Configuration
 # ========================================================================
 
+
 @pytest.fixture(scope="module")
 def postgresql_config():
     """PostgreSQL connection configuration for integration tests"""
     return {
-        'host': 'localhost',
-        'port': 5432,
-        'database': 'test_db',
-        'user': 'test_user',
-        'password': 'test_password',
-        'sslmode': 'disable',  # Disable SSL for local testing
+        "host": "localhost",
+        "port": 5432,
+        "database": "test_db",
+        "user": "test_user",
+        "password": "test_password",
+        "sslmode": "disable",  # Disable SSL for local testing
     }
 
 
@@ -97,6 +97,7 @@ def test_table_setup(postgresql_config, skip_if_no_postgresql):
 # Integration Tests (Real PostgreSQL)
 # ========================================================================
 
+
 class TestPostgreSQLConnectorRealConnection:
     """Integration tests with real PostgreSQL database"""
 
@@ -118,7 +119,7 @@ class TestPostgreSQLConnectorRealConnection:
 
         tables = connector.list_tables()
 
-        assert 'test_users' in tables
+        assert "test_users" in tables
         assert len(tables) >= 1
 
         connector.disconnect()
@@ -130,14 +131,14 @@ class TestPostgreSQLConnectorRealConnection:
         connector = PostgreSQLConnector(**postgresql_config)
         connector.connect()
 
-        schema = connector.get_table_schema('test_users')
+        schema = connector.get_table_schema("test_users")
 
         assert len(schema) == 6  # 6 columns
 
         # Check specific column
-        id_column = next(col for col in schema if col['name'] == 'id')
-        assert id_column['type'] == 'INTEGER' or 'SERIAL' in id_column['type']
-        assert id_column['nullable'] is False
+        id_column = next(col for col in schema if col["name"] == "id")
+        assert id_column["type"] == "INTEGER" or "SERIAL" in id_column["type"]
+        assert id_column["nullable"] is False
 
         connector.disconnect()
 
@@ -151,9 +152,9 @@ class TestPostgreSQLConnectorRealConnection:
         results = connector.execute_select("SELECT * FROM test_users ORDER BY name")
 
         assert len(results) == 3
-        assert results[0][1] == 'Alice'  # name column
-        assert results[1][1] == 'Bob'
-        assert results[2][1] == 'Charlie'
+        assert results[0][1] == "Alice"  # name column
+        assert results[1][1] == "Bob"
+        assert results[2][1] == "Charlie"
 
         connector.disconnect()
 
@@ -166,18 +167,17 @@ class TestPostgreSQLConnectorRealConnection:
 
         affected = connector.execute_insert(
             "INSERT INTO test_users (name, email, age) VALUES (%s, %s, %s)",
-            params=['David', 'david@example.com', 28]
+            params=["David", "david@example.com", 28],
         )
 
         assert affected == 1
 
         # Verify insert
         results = connector.execute_select(
-            "SELECT * FROM test_users WHERE email = %s",
-            params=['david@example.com']
+            "SELECT * FROM test_users WHERE email = %s", params=["david@example.com"]
         )
         assert len(results) == 1
-        assert results[0][1] == 'David'
+        assert results[0][1] == "David"
 
         connector.disconnect()
 
@@ -189,16 +189,14 @@ class TestPostgreSQLConnectorRealConnection:
         connector.connect()
 
         affected = connector.execute_update(
-            "UPDATE test_users SET age = %s WHERE name = %s",
-            params=[31, 'Alice']
+            "UPDATE test_users SET age = %s WHERE name = %s", params=[31, "Alice"]
         )
 
         assert affected == 1
 
         # Verify update
         results = connector.execute_select(
-            "SELECT age FROM test_users WHERE name = %s",
-            params=['Alice']
+            "SELECT age FROM test_users WHERE name = %s", params=["Alice"]
         )
         assert results[0][0] == 31
 
@@ -212,16 +210,14 @@ class TestPostgreSQLConnectorRealConnection:
         connector.connect()
 
         affected = connector.execute_delete(
-            "DELETE FROM test_users WHERE name = %s",
-            params=['Bob']
+            "DELETE FROM test_users WHERE name = %s", params=["Bob"]
         )
 
         assert affected == 1
 
         # Verify delete
         results = connector.execute_select(
-            "SELECT * FROM test_users WHERE name = %s",
-            params=['Bob']
+            "SELECT * FROM test_users WHERE name = %s", params=["Bob"]
         )
         assert len(results) == 0
 
@@ -240,7 +236,7 @@ class TestPostgreSQLConnectorRealConnection:
         # Insert record
         connector.execute_insert(
             "INSERT INTO test_users (name, email, age) VALUES (%s, %s, %s)",
-            params=['Eve', 'eve@example.com', 27]
+            params=["Eve", "eve@example.com", 27],
         )
 
         # Commit transaction
@@ -248,8 +244,7 @@ class TestPostgreSQLConnectorRealConnection:
 
         # Verify record exists
         results = connector.execute_select(
-            "SELECT * FROM test_users WHERE email = %s",
-            params=['eve@example.com']
+            "SELECT * FROM test_users WHERE email = %s", params=["eve@example.com"]
         )
         assert len(results) == 1
 
@@ -271,7 +266,7 @@ class TestPostgreSQLConnectorRealConnection:
         # Insert record
         connector.execute_insert(
             "INSERT INTO test_users (name, email, age) VALUES (%s, %s, %s)",
-            params=['Frank', 'frank@example.com', 40]
+            params=["Frank", "frank@example.com", 40],
         )
 
         # Rollback transaction
@@ -291,13 +286,15 @@ class TestPostgreSQLConnectorRealConnection:
         connector.connect()
 
         results = []
-        for row in connector.execute_query_stream("SELECT * FROM test_users ORDER BY name"):
+        for row in connector.execute_query_stream(
+            "SELECT * FROM test_users ORDER BY name"
+        ):
             results.append(row)
             if len(results) >= 2:  # Just test first 2 rows
                 break
 
         assert len(results) == 2
-        assert results[0][1] == 'Alice'
+        assert results[0][1] == "Alice"
 
         connector.disconnect()
 
@@ -311,9 +308,9 @@ class TestPostgreSQLConnectorRealConnection:
         pks = connector.get_primary_keys()
 
         # Check test_users table
-        test_users_pk = [pk for pk in pks if pk[0] == 'test_users']
+        test_users_pk = [pk for pk in pks if pk[0] == "test_users"]
         assert len(test_users_pk) == 1
-        assert test_users_pk[0][1] == 'id'
+        assert test_users_pk[0][1] == "id"
 
         connector.disconnect()
 
@@ -341,10 +338,10 @@ class TestPostgreSQLConnectorRealConnection:
         fks = connector.get_foreign_keys()
 
         # Check test_orders foreign key
-        test_orders_fk = [fk for fk in fks if fk['from_table'] == 'test_orders']
+        test_orders_fk = [fk for fk in fks if fk["from_table"] == "test_orders"]
         assert len(test_orders_fk) >= 1
-        assert test_orders_fk[0]['to_table'] == 'test_users'
-        assert test_orders_fk[0]['to_column'] == 'id'
+        assert test_orders_fk[0]["to_table"] == "test_users"
+        assert test_orders_fk[0]["to_column"] == "id"
 
         connector.disconnect()
 
@@ -353,10 +350,11 @@ class TestPostgreSQLConnectorRealConnection:
 # Mock Integration Tests (No PostgreSQL Required)
 # ========================================================================
 
+
 class TestPostgreSQLConnectorMockIntegration:
     """Integration tests using mocks (no PostgreSQL required)"""
 
-    @patch('src.core.connectors.postgresql.psycopg2')
+    @patch("src.core.connectors.postgresql.psycopg2")
     def test_full_workflow_with_mocks(self, mock_psycopg2):
         """Test complete workflow using mocked PostgreSQL"""
         # Setup mocks
@@ -368,19 +366,19 @@ class TestPostgreSQLConnectorMockIntegration:
 
         # Mock query results
         mock_cursor.fetchall.side_effect = [
-            [('test_users',), ('test_orders',)],  # list_tables
-            [('id', 'INTEGER'), ('name', 'VARCHAR')],  # get_table_schema
-            [(1, 'Alice'), (2, 'Bob')],  # execute_select
+            [("test_users",), ("test_orders",)],  # list_tables
+            [("id", "INTEGER"), ("name", "VARCHAR")],  # get_table_schema
+            [(1, "Alice"), (2, "Bob")],  # execute_select
         ]
         mock_cursor.rowcount = 1  # Affected rows for INSERT/UPDATE/DELETE
 
         # Connect
         connector = PostgreSQLConnector(
-            host='localhost',
+            host="localhost",
             port=5432,
-            database='testdb',
-            user='testuser',
-            password='testpass'
+            database="testdb",
+            user="testuser",
+            password="testpass",
         )
         connector.connect()
 
@@ -388,10 +386,10 @@ class TestPostgreSQLConnectorMockIntegration:
 
         # List tables
         tables = connector.list_tables()
-        assert 'test_users' in tables
+        assert "test_users" in tables
 
         # Get schema
-        schema = connector.get_table_schema('test_users')
+        schema = connector.get_table_schema("test_users")
         assert len(schema) == 2
 
         # Execute SELECT
@@ -400,8 +398,7 @@ class TestPostgreSQLConnectorMockIntegration:
 
         # Execute INSERT
         affected = connector.execute_insert(
-            "INSERT INTO test_users (name) VALUES (%s)",
-            params=['Eve']
+            "INSERT INTO test_users (name) VALUES (%s)", params=["Eve"]
         )
         assert affected == 1
 
@@ -409,18 +406,18 @@ class TestPostgreSQLConnectorMockIntegration:
         connector.disconnect()
         assert connector.connected is False
 
-    @patch('src.core.connectors.postgresql.psycopg2')
+    @patch("src.core.connectors.postgresql.psycopg2")
     def test_error_handling_with_mocks(self, mock_psycopg2):
         """Test error handling using mocked PostgreSQL"""
         # Setup mock to raise exception
         mock_psycopg2.connect.side_effect = Exception("Connection failed")
 
         connector = PostgreSQLConnector(
-            host='localhost',
+            host="localhost",
             port=5432,
-            database='testdb',
-            user='testuser',
-            password='testpass'
+            database="testdb",
+            user="testuser",
+            password="testpass",
         )
 
         with pytest.raises(Exception, match="Connection failed"):
@@ -428,7 +425,7 @@ class TestPostgreSQLConnectorMockIntegration:
 
         assert connector.connected is False
 
-    @patch('src.core.connectors.postgresql.psycopg2')
+    @patch("src.core.connectors.postgresql.psycopg2")
     def test_connection_pooling_integration(self, mock_psycopg2):
         """Test integration with connection pooling"""
         from src.core.database.pool import ConnectionPool
@@ -443,11 +440,11 @@ class TestPostgreSQLConnectorMockIntegration:
         # Acquire connection from pool
         connector = PostgreSQLConnector(
             connection_pool=pool,
-            host='localhost',
+            host="localhost",
             port=5432,
-            database='testdb',
-            user='testuser',
-            password='testpass'
+            database="testdb",
+            user="testuser",
+            password="testpass",
         )
         connector.connect()
 

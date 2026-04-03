@@ -9,8 +9,8 @@ Multiple strategies for cache invalidation:
 @MX:SPEC: SPEC-PLATFORM-001 P2-T009
 """
 
-from typing import Any, Set
-from datetime import datetime, timedelta
+from typing import Any
+from datetime import datetime
 
 
 class TimeBasedInvalidation:
@@ -259,8 +259,8 @@ class HybridInvalidation:
 
 
 __all__ = [
-    'TimeBasedInvalidation',
-    'EventBasedInvalidation',
-    'TagBasedInvalidation',
-    'HybridInvalidation'
+    "TimeBasedInvalidation",
+    "EventBasedInvalidation",
+    "TagBasedInvalidation",
+    "HybridInvalidation",
 ]

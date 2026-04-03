@@ -48,7 +48,9 @@ async def init_db(database_url: str = None) -> None:
     engine = create_async_engine(url, echo=False, pool_pre_ping=True)
 
     # Create session factory
-    async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async_session_maker = async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:

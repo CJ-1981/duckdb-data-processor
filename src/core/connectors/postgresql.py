@@ -10,6 +10,7 @@ from contextlib import contextmanager
 try:
     import psycopg2
     from psycopg2 import sql
+
     PSYCOPG2_AVAILABLE = True
 except ImportError:
     PSYCOPG2_AVAILABLE = False
@@ -42,7 +43,7 @@ class PostgreSQLConnector(DatabaseConnector):
         sslmode: Optional[str] = None,
         connection_timeout: float = 30.0,
         connection_pool=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize PostgreSQL connector.
@@ -62,8 +63,10 @@ class PostgreSQLConnector(DatabaseConnector):
         super().__init__(connection_string, **kwargs)
 
         # Allow mocking for tests
-        if not PSYCOPG2_AVAILABLE and not kwargs.get('_allow_mock', False):
-            raise ImportError("psycopg2 is required for PostgreSQL connector. Install with: pip install psycopg2-binary")
+        if not PSYCOPG2_AVAILABLE and not kwargs.get("_allow_mock", False):
+            raise ImportError(
+                "psycopg2 is required for PostgreSQL connector. Install with: pip install psycopg2-binary"
+            )
 
         self._host = host
         self._port = port or 5432
@@ -79,7 +82,7 @@ class PostgreSQLConnector(DatabaseConnector):
             self.connection_string = self._build_connection_string()
 
     @classmethod
-    def from_config(cls, config) -> 'PostgreSQLConnector':
+    def from_config(cls, config) -> "PostgreSQLConnector":
         """
         Create connector from configuration object.
 
@@ -118,26 +121,26 @@ class PostgreSQLConnector(DatabaseConnector):
             if self.connection_string:
                 conn_params = self.parse_connection_string(self.connection_string)
                 kwargs_conn = {
-                    'host': conn_params['host'],
-                    'port': conn_params['port'],
-                    'database': conn_params['database'],
-                    'user': conn_params['user'],
-                    'password': conn_params['password'],
-                    'connect_timeout': self._connection_timeout,
+                    "host": conn_params["host"],
+                    "port": conn_params["port"],
+                    "database": conn_params["database"],
+                    "user": conn_params["user"],
+                    "password": conn_params["password"],
+                    "connect_timeout": self._connection_timeout,
                 }
 
                 # Add SSL mode from params
-                if 'sslmode' in conn_params['params']:
-                    kwargs_conn['sslmode'] = conn_params['params']['sslmode'][0]
+                if "sslmode" in conn_params["params"]:
+                    kwargs_conn["sslmode"] = conn_params["params"]["sslmode"][0]
             else:
                 kwargs_conn = {
-                    'host': self._host,
-                    'port': self._port,
-                    'database': self._database,
-                    'user': self._user,
-                    'password': self._password,
-                    'sslmode': self._sslmode,
-                    'connect_timeout': self._connection_timeout,
+                    "host": self._host,
+                    "port": self._port,
+                    "database": self._database,
+                    "user": self._user,
+                    "password": self._password,
+                    "sslmode": self._sslmode,
+                    "connect_timeout": self._connection_timeout,
                 }
 
             # Remove None values
@@ -183,13 +186,15 @@ class PostgreSQLConnector(DatabaseConnector):
             cursor.execute(query, params)
 
             # Return results for SELECT
-            if query.strip().upper().startswith('SELECT'):
+            if query.strip().upper().startswith("SELECT"):
                 return cursor.fetchall()
             # Return row count for INSERT/UPDATE/DELETE
             else:
                 return cursor.rowcount
 
-    def copy_data(self, table_name: str, data: str, columns: Optional[List[str]] = None) -> None:
+    def copy_data(
+        self, table_name: str, data: str, columns: Optional[List[str]] = None
+    ) -> None:
         """
         Use COPY command for bulk data import.
 
@@ -207,7 +212,9 @@ class PostgreSQLConnector(DatabaseConnector):
         with self._get_cursor() as cursor:
             if columns:
                 column_str = ", ".join(columns)
-                copy_sql = f"COPY {table_name} ({column_str}) FROM STDIN WITH (FORMAT CSV)"
+                copy_sql = (
+                    f"COPY {table_name} ({column_str}) FROM STDIN WITH (FORMAT CSV)"
+                )
             else:
                 copy_sql = f"COPY {table_name} FROM STDIN WITH (FORMAT CSV)"
 
@@ -215,7 +222,9 @@ class PostgreSQLConnector(DatabaseConnector):
 
         self._connection.commit()
 
-    def execute_select(self, query: str, params: Optional[List[Any]] = None) -> List[Tuple]:
+    def execute_select(
+        self, query: str, params: Optional[List[Any]] = None
+    ) -> List[Tuple]:
         """
         Execute SELECT query with PostgreSQL-specific optimizations.
 

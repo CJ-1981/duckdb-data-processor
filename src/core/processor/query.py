@@ -45,10 +45,7 @@ class QueryExecutor:
         self._query_history: List[Dict[str, Any]] = []
 
     def execute(
-        self,
-        query: str,
-        parameters: Optional[List] = None,
-        use_cache: bool = True
+        self, query: str, parameters: Optional[List] = None, use_cache: bool = True
     ) -> pd.DataFrame:
         """
         Execute query with optional caching
@@ -64,18 +61,16 @@ class QueryExecutor:
         # Check cache first
         cache_key = self._make_cache_key(query, parameters)
         if use_cache and self._cache_enabled and cache_key in self._cache:
-                cache_entry = self._cache[cache_key]
-                if time.time() - cache_entry['timestamp'] < self._cache_ttl:
-                    logger.debug(f"Cache hit for query")
-                    return cache_entry['result'].copy()
+            cache_entry = self._cache[cache_key]
+            if time.time() - cache_entry["timestamp"] < self._cache_ttl:
+                logger.debug("Cache hit for query")
+                return cache_entry["result"].copy()
 
         # Track query if enabled
         if self._track_queries:
-            self._query_history.append({
-                'query': query,
-                'parameters': parameters,
-                'timestamp': time.time()
-            })
+            self._query_history.append(
+                {"query": query, "parameters": parameters, "timestamp": time.time()}
+            )
 
         # Execute query
         if parameters:
@@ -85,10 +80,7 @@ class QueryExecutor:
 
         # Cache result
         if self._cache_enabled and use_cache:
-            self._cache[cache_key] = {
-                'result': result.copy(),
-                'timestamp': time.time()
-            }
+            self._cache[cache_key] = {"result": result.copy(), "timestamp": time.time()}
 
         return result
 

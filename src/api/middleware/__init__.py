@@ -104,19 +104,15 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
             # Log the error
             request_id = getattr(request.state, "request_id", "unknown")
             logger.error(
-                f"Unhandled exception: {str(e)} "
-                f"[Request-ID: {request_id}]",
-                exc_info=True
+                f"Unhandled exception: {str(e)} [Request-ID: {request_id}]",
+                exc_info=True,
             )
 
             # Return JSON error response
             return JSONResponse(
                 status_code=500,
-                content={
-                    "detail": "Internal server error",
-                    "request_id": request_id
-                },
-                headers={"X-Request-ID": request_id}
+                content={"detail": "Internal server error", "request_id": request_id},
+                headers={"X-Request-ID": request_id},
             )
 
 

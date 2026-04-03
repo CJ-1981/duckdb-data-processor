@@ -85,7 +85,7 @@ class CacheMetrics:
             "hits": hits,
             "misses": misses,
             "total_requests": total,
-            "hit_rate": round(hit_rate, 4)
+            "hit_rate": round(hit_rate, 4),
         }
 
     async def reset(self, cache_name: str) -> None:
@@ -132,4 +132,4 @@ class CacheMetrics:
         return self.manager.generate_key("metrics", metric_type, cache_name)
 
 
-__all__ = ['CacheMetrics']
+__all__ = ["CacheMetrics"]

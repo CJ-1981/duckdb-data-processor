@@ -13,7 +13,6 @@ Tests are designed to document expected behavior for:
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime
-from typing import Dict, Any
 from uuid import uuid4
 
 from httpx import AsyncClient, ASGITransport
@@ -23,6 +22,7 @@ from fastapi import status
 # ============================================================================
 # Helper Functions for Testing
 # ============================================================================
+
 
 def setup_auth_mocks(app, mock_db_session, mock_current_user):
     """
@@ -40,7 +40,6 @@ def setup_auth_mocks(app, mock_db_session, mock_current_user):
         None (modifies app.dependency_overrides in place)
     """
     from src.api.routes import jobs
-    from unittest.mock import AsyncMock
 
     # Create wrapper that returns the mock directly (not async)
     def override_get_db():
@@ -67,10 +66,12 @@ def cleanup_auth_mocks(app):
 # Test Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def app():
     """Create FastAPI app for testing."""
     from src.api.main import create_app
+
     app = create_app()
     return app
 
@@ -93,7 +94,7 @@ def mock_current_user():
         "sub": "1",
         "username": "testuser",
         "role": "analyst",
-        "permissions": ["workflows:execute", "jobs:read", "jobs:write"]
+        "permissions": ["workflows:execute", "jobs:read", "jobs:write"],
     }
 
 
@@ -111,14 +112,26 @@ def mock_workflow():
     workflow.updated_at = datetime.utcnow()
     workflow.definition = {
         "nodes": [
-            {"id": "node1", "type": "data_source", "config": {"connector": "csv", "path": "data.csv"}},
-            {"id": "node2", "type": "transform", "config": {"operation": "filter", "expression": "age > 18"}},
-            {"id": "node3", "type": "data_sink", "config": {"format": "parquet", "path": "output.parquet"}}
+            {
+                "id": "node1",
+                "type": "data_source",
+                "config": {"connector": "csv", "path": "data.csv"},
+            },
+            {
+                "id": "node2",
+                "type": "transform",
+                "config": {"operation": "filter", "expression": "age > 18"},
+            },
+            {
+                "id": "node3",
+                "type": "data_sink",
+                "config": {"format": "parquet", "path": "output.parquet"},
+            },
         ],
         "edges": [
             {"source": "node1", "target": "node2"},
-            {"source": "node2", "target": "node3"}
-        ]
+            {"source": "node2", "target": "node3"},
+        ],
     }
     return workflow
 
@@ -128,13 +141,14 @@ def valid_job_data(mock_workflow):
     """Create valid job submission data for testing."""
     return {
         "workflow_id": mock_workflow.id,  # Integer ID
-        "parameters": {}
+        "parameters": {},
     }
 
 
 # ============================================================================
 # Job Submission Tests - Create
 # ============================================================================
+
 
 class TestJobSubmission:
     """Test job submission endpoint."""
@@ -175,11 +189,13 @@ class TestJobSubmission:
         try:
             with patch.object(jobs.JobService, "submit_job", mock_submit):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.post(
                         "/api/v1/jobs",
                         json=valid_job_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -203,10 +219,7 @@ class TestJobSubmission:
 
         job_data = {
             "workflow_id": mock_workflow.id,
-            "parameters": {
-                "limit": 1000,
-                "output_format": "json"
-            }
+            "parameters": {"limit": 1000, "output_format": "json"},
         }
 
         # Mock the service layer
@@ -231,11 +244,13 @@ class TestJobSubmission:
         try:
             with patch.object(jobs.JobService, "submit_job", mock_submit):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.post(
                         "/api/v1/jobs",
                         json=job_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -255,7 +270,7 @@ class TestJobSubmission:
 
         job_data = {
             "workflow_id": 99999,  # Non-existent workflow ID (integer)
-            "parameters": {}
+            "parameters": {},
         }
 
         # Mock the service layer
@@ -268,11 +283,13 @@ class TestJobSubmission:
         try:
             with patch.object(jobs.JobService, "submit_job", mock_submit):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.post(
                         "/api/v1/jobs",
                         json=job_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -290,7 +307,7 @@ class TestJobSubmission:
 
         job_data = {
             "workflow_id": "not-an-integer",  # Invalid format (string instead of int)
-            "parameters": {}
+            "parameters": {},
         }
 
         # Setup authentication mocks
@@ -298,11 +315,13 @@ class TestJobSubmission:
 
         try:
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 response = await client.post(
                     "/api/v1/jobs",
                     json=job_data,
-                    headers={"Authorization": "Bearer 1:testuser:analyst"}
+                    headers={"Authorization": "Bearer 1:testuser:analyst"},
                 )
         finally:
             cleanup_auth_mocks(app)
@@ -313,6 +332,7 @@ class TestJobSubmission:
 # ============================================================================
 # Job Status Tests - Get
 # ============================================================================
+
 
 class TestJobStatus:
     """Test job status retrieval endpoint."""
@@ -350,10 +370,12 @@ class TestJobStatus:
         try:
             with patch.object(jobs.JobService, "get_job", mock_get):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         f"/api/v1/jobs/{mock_job.id}",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -397,10 +419,12 @@ class TestJobStatus:
         try:
             with patch.object(jobs.JobService, "get_job", mock_get):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         f"/api/v1/jobs/{mock_job.id}",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -444,10 +468,12 @@ class TestJobStatus:
         try:
             with patch.object(jobs.JobService, "get_job", mock_get):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         f"/api/v1/jobs/{mock_job.id}",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -476,10 +502,12 @@ class TestJobStatus:
         try:
             with patch.object(jobs.JobService, "get_job", mock_get):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         f"/api/v1/jobs/{str(uuid4())}",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -490,6 +518,7 @@ class TestJobStatus:
 # ============================================================================
 # Job List Tests
 # ============================================================================
+
 
 class TestJobList:
     """Test job list endpoint."""
@@ -530,10 +559,12 @@ class TestJobList:
         try:
             with patch.object(jobs.JobService, "list_jobs", mock_list):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         "/api/v1/jobs",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -545,9 +576,7 @@ class TestJobList:
         assert len(data["jobs"]) == 3
 
     @pytest.mark.asyncio
-    async def test_list_jobs_empty(
-        self, app, mock_db_session, mock_current_user
-    ):
+    async def test_list_jobs_empty(self, app, mock_db_session, mock_current_user):
         """Test job list when no jobs exist."""
         from src.api.routes import jobs
 
@@ -563,10 +592,12 @@ class TestJobList:
         try:
             with patch.object(jobs.JobService, "list_jobs", mock_list):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         "/api/v1/jobs",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -580,6 +611,7 @@ class TestJobList:
 # ============================================================================
 # Job Cancellation Tests
 # ============================================================================
+
 
 class TestJobCancellation:
     """Test job cancellation endpoint."""
@@ -620,12 +652,16 @@ class TestJobCancellation:
         setup_auth_mocks(app, mock_db_session, mock_current_user)
 
         try:
-            with patch.multiple(jobs.JobService, cancel_job=mock_cancel, get_job=mock_get):
+            with patch.multiple(
+                jobs.JobService, cancel_job=mock_cancel, get_job=mock_get
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.post(
                         f"/api/v1/jobs/{mock_job.id}/cancel",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -654,12 +690,16 @@ class TestJobCancellation:
         setup_auth_mocks(app, mock_db_session, mock_current_user)
 
         try:
-            with patch.multiple(jobs.JobService, cancel_job=mock_cancel, get_job=mock_get):
+            with patch.multiple(
+                jobs.JobService, cancel_job=mock_cancel, get_job=mock_get
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.post(
                         f"/api/v1/jobs/{str(uuid4())}/cancel",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -667,9 +707,7 @@ class TestJobCancellation:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     @pytest.mark.asyncio
-    async def test_cancel_job_not_found(
-        self, app, mock_db_session, mock_current_user
-    ):
+    async def test_cancel_job_not_found(self, app, mock_db_session, mock_current_user):
         """Test cancelling a non-existent job."""
         from src.api.routes import jobs
 
@@ -686,12 +724,16 @@ class TestJobCancellation:
         setup_auth_mocks(app, mock_db_session, mock_current_user)
 
         try:
-            with patch.multiple(jobs.JobService, cancel_job=mock_cancel, get_job=mock_get):
+            with patch.multiple(
+                jobs.JobService, cancel_job=mock_cancel, get_job=mock_get
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.post(
                         f"/api/v1/jobs/{str(uuid4())}/cancel",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)

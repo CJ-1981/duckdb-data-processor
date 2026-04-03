@@ -4,12 +4,12 @@ Data API routes with RBAC authorization.
 @MX:NOTE: Example routes demonstrating RBAC integration
 """
 
-from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Dict, Any
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from src.api.auth.decorators import require_permission
-from src.api.auth.dependencies import get_current_user_with_role, authorize_endpoint
+from src.api.auth.dependencies import get_current_user_with_role
 
 router = APIRouter(prefix="/api/v1/data", tags=["Data"])
 

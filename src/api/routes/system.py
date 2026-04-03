@@ -4,8 +4,8 @@ System configuration API routes with RBAC authorization.
 @MX:NOTE: Example routes demonstrating RBAC integration (admin-only)
 """
 
-from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Dict, Any
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from src.api.auth.decorators import require_role

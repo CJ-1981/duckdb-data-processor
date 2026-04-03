@@ -13,21 +13,20 @@ import pytest
 import tempfile
 import json
 from pathlib import Path
-from typing import Dict, Any, List
-from unittest.mock import Mock, patch, MagicMock, call
+from typing import Dict, Any
+from unittest.mock import Mock
 import duckdb
-import pandas as pd
 
 from src.core.processor import Processor
 from src.core.plugins import PluginRegistry, Plugin
 from src.core.config.loader import Config
 from src.core.database import DatabaseConnection
-from src.core.connectors import CSVConnector
 
 
 # ========================================================================
 #  Test Fixtures
 # ========================================================================
+
 
 @pytest.fixture
 def sample_csv_file():
@@ -39,7 +38,7 @@ def sample_csv_file():
 4,Diana,28,1800.00,West,active
 5,Eve,32,2200.50,North,active
 """
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
         f.write(csv_data)
         temp_path = f.name
 
@@ -56,7 +55,7 @@ def sample_csv_with_kv():
 2,age:25,region:South,amount:950,2023-02-20
 3,age:35,region:East,amount:2500,2023-03-10
 """
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
         f.write(csv_data)
         temp_path = f.name
 
@@ -103,7 +102,7 @@ def mock_database():
 @pytest.fixture
 def real_duckdb_connection():
     """Create a real DuckDB in-memory connection for integration tests"""
-    con = duckdb.connect(':memory:')
+    con = duckdb.connect(":memory:")
     yield con
     con.close()
 
@@ -111,6 +110,7 @@ def real_duckdb_connection():
 # ========================================================================
 #  Processor Initialization Tests
 # ========================================================================
+
 
 class TestProcessorInitialization:
     """Test Processor initialization and configuration"""
@@ -157,6 +157,7 @@ processor:
 #  Data Loading Tests - CSV
 # ========================================================================
 
+
 class TestProcessorLoadCSV:
     """Test CSV loading functionality"""
 
@@ -171,17 +172,14 @@ class TestProcessorLoadCSV:
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_csv(
-                sample_csv_file,
-                delimiter=',',
-                has_header=True,
-                encoding='utf-8'
+                sample_csv_file, delimiter=",", has_header=True, encoding="utf-8"
             )
 
     def test_load_csv_into_table(self, sample_csv_file):
         """Test loading CSV into specific table"""
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
-            processor.load_csv(sample_csv_file, table_name='custom_data')
+            processor.load_csv(sample_csv_file, table_name="custom_data")
 
     def test_load_csv_with_schema_inference(self, sample_csv_file):
         """Test that CSV loading infers column types"""
@@ -190,13 +188,14 @@ class TestProcessorLoadCSV:
             processor.load_csv(sample_csv_file)
             # Should have inferred schema
             schema = processor.schema()
-            assert 'id' in schema
-            assert 'name' in schema
+            assert "id" in schema
+            assert "name" in schema
 
 
 # ========================================================================
 #  Data Loading Tests - Database
 # ========================================================================
+
 
 class TestProcessorLoadDatabase:
     """Test database loading functionality"""
@@ -207,7 +206,7 @@ class TestProcessorLoadDatabase:
             processor = Processor()
             processor.load_database(
                 connection_string="postgresql://user:pass@host:5432/db",
-                query="SELECT * FROM users"
+                query="SELECT * FROM users",
             )
 
     def test_load_from_mysql(self):
@@ -216,7 +215,7 @@ class TestProcessorLoadDatabase:
             processor = Processor()
             processor.load_database(
                 connection_string="mysql://user:pass@host:3306/db",
-                query="SELECT * FROM products"
+                query="SELECT * FROM products",
             )
 
     def test_load_from_duckdb_query(self, real_duckdb_connection):
@@ -224,14 +223,14 @@ class TestProcessorLoadDatabase:
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_database(
-                connection=real_duckdb_connection,
-                query="SELECT 1 as value"
+                connection=real_duckdb_connection, query="SELECT 1 as value"
             )
 
 
 # ========================================================================
 #  Data Loading Tests - API
 # ========================================================================
+
 
 class TestProcessorLoadAPI:
     """Test API loading functionality"""
@@ -240,10 +239,7 @@ class TestProcessorLoadAPI:
         """Test loading data from REST API endpoint"""
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
-            processor.load_api(
-                url="https://api.example.com/data",
-                method="GET"
-            )
+            processor.load_api(url="https://api.example.com/data", method="GET")
 
     def test_load_from_api_with_authentication(self):
         """Test loading data from API with auth headers"""
@@ -251,7 +247,7 @@ class TestProcessorLoadAPI:
             processor = Processor()
             processor.load_api(
                 url="https://api.example.com/secure-data",
-                headers={"Authorization": "Bearer token123"}
+                headers={"Authorization": "Bearer token123"},
             )
 
     def test_load_from_api_with_pagination(self):
@@ -259,15 +255,14 @@ class TestProcessorLoadAPI:
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_api(
-                url="https://api.example.com/paginated",
-                paginate=True,
-                page_size=100
+                url="https://api.example.com/paginated", paginate=True, page_size=100
             )
 
 
 # ========================================================================
 #  Data Processing Tests - Filter
 # ========================================================================
+
 
 class TestProcessorFilter:
     """Test data filtering functionality"""
@@ -295,7 +290,7 @@ class TestProcessorFilter:
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_csv(sample_csv_file)
-            processor.create_view('active_users', "status = 'active'")
+            processor.create_view("active_users", "status = 'active'")
             # View should be queryable
             result = processor.sql("SELECT * FROM active_users")
             assert len(result) == 4
@@ -305,6 +300,7 @@ class TestProcessorFilter:
 #  Data Processing Tests - Transform
 # ========================================================================
 
+
 class TestProcessorTransform:
     """Test data transformation functionality"""
 
@@ -313,39 +309,42 @@ class TestProcessorTransform:
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_csv(sample_csv_file)
-            processor.add_column('tier', """
+            processor.add_column(
+                "tier",
+                """
                 CASE
                     WHEN CAST(amount AS DOUBLE) >= 2000 THEN 'GOLD'
                     WHEN CAST(amount AS DOUBLE) >= 1000 THEN 'SILVER'
                     ELSE 'BRONZE'
                 END
-            """)
+            """,
+            )
             schema = processor.schema()
-            assert 'tier' in schema
+            assert "tier" in schema
 
     def test_transform_with_lambda(self, sample_csv_file):
         """Test transforming column with Python lambda"""
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_csv(sample_csv_file)
-            processor.transform('name', lambda x: x.upper())
+            processor.transform("name", lambda x: x.upper())
             result = processor.preview(1)
-            assert result['name'][0] == 'ALICE'
+            assert result["name"][0] == "ALICE"
 
     def test_transform_multiple_columns(self, sample_csv_file):
         """Test transforming multiple columns"""
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_csv(sample_csv_file)
-            processor.transform({
-                'name': lambda x: x.upper(),
-                'region': lambda x: x.lower()
-            })
+            processor.transform(
+                {"name": lambda x: x.upper(), "region": lambda x: x.lower()}
+            )
 
 
 # ========================================================================
 #  Data Processing Tests - Aggregate
 # ========================================================================
+
 
 class TestProcessorAggregate:
     """Test data aggregation functionality"""
@@ -355,7 +354,7 @@ class TestProcessorAggregate:
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_csv(sample_csv_file)
-            result = processor.aggregate('region', 'amount', 'SUM')
+            result = processor.aggregate("region", "amount", "SUM")
             assert len(result) == 4  # 4 regions
 
     def test_aggregate_avg(self, sample_csv_file):
@@ -363,36 +362,36 @@ class TestProcessorAggregate:
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_csv(sample_csv_file)
-            result = processor.aggregate('region', 'amount', 'AVG')
+            result = processor.aggregate("region", "amount", "AVG")
 
     def test_aggregate_count(self, sample_csv_file):
         """Test COUNT aggregation"""
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_csv(sample_csv_file)
-            result = processor.aggregate('region', 'id', 'COUNT')
+            result = processor.aggregate("region", "id", "COUNT")
 
     def test_aggregate_with_multiple_group_by(self, sample_csv_file):
         """Test aggregation with multiple GROUP BY columns"""
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_csv(sample_csv_file)
-            processor.add_column('tier', """
+            processor.add_column(
+                "tier",
+                """
                 CASE
                     WHEN CAST(amount AS DOUBLE) >= 2000 THEN 'GOLD'
                     ELSE 'SILVER'
                 END
-            """)
-            result = processor.aggregate(
-                ['region', 'tier'],
-                'amount',
-                'SUM'
+            """,
             )
+            result = processor.aggregate(["region", "tier"], "amount", "SUM")
 
 
 # ========================================================================
 #  Data Processing Tests - Join
 # ========================================================================
+
 
 class TestProcessorJoin:
     """Test dataset joining functionality"""
@@ -406,20 +405,16 @@ South,Jane
 East,Bob
 West,Alice
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(csv_data2)
             temp_path2 = f.name
 
         try:
             with pytest.raises((ImportError, AttributeError)):
                 processor = Processor()
-                processor.load_csv(sample_csv_file, table_name='sales')
-                processor.load_csv(temp_path2, table_name='regions')
-                result = processor.join(
-                    'sales', 'regions',
-                    on='region',
-                    how='LEFT'
-                )
+                processor.load_csv(sample_csv_file, table_name="sales")
+                processor.load_csv(temp_path2, table_name="regions")
+                result = processor.join("sales", "regions", on="region", how="LEFT")
         finally:
             Path(temp_path2).unlink(missing_ok=True)
 
@@ -427,6 +422,7 @@ West,Alice
 # ========================================================================
 #  Export Tests
 # ========================================================================
+
 
 class TestProcessorExport:
     """Test data export functionality"""
@@ -468,7 +464,7 @@ class TestProcessorExport:
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_csv(sample_csv_file)
-            processor.export_duckdb(str(output_path), table_name='exported_data')
+            processor.export_duckdb(str(output_path), table_name="exported_data")
             assert output_path.exists()
 
     def test_export_query_result(self, sample_csv_file, tmp_path):
@@ -478,14 +474,14 @@ class TestProcessorExport:
             processor = Processor()
             processor.load_csv(sample_csv_file)
             processor.export_csv(
-                str(output_path),
-                query="SELECT * FROM data WHERE status = 'active'"
+                str(output_path), query="SELECT * FROM data WHERE status = 'active'"
             )
 
 
 # ========================================================================
 #  Plugin Integration Tests
 # ========================================================================
+
 
 class TestProcessorPluginIntegration:
     """Test plugin system integration"""
@@ -527,13 +523,14 @@ class TestProcessorPluginIntegration:
             processor.plugin_registry.enable_plugin("custom_ops")
 
             # Custom operation should be available
-            assert hasattr(processor, 'custom_operation')
+            assert hasattr(processor, "custom_operation")
             assert processor.custom_operation() == "custom_result"
 
 
 # ========================================================================
 #  Configuration Tests
 # ========================================================================
+
 
 class TestProcessorConfiguration:
     """Test configuration-driven behavior"""
@@ -568,6 +565,7 @@ class TestProcessorConfiguration:
 #  Streaming Tests
 # ========================================================================
 
+
 class TestProcessorStreaming:
     """Test streaming functionality for large datasets"""
 
@@ -575,7 +573,7 @@ class TestProcessorStreaming:
         """Test that large files automatically trigger streaming"""
         # Create a large CSV file (> 100MB equivalent in rows)
         csv_path = tmp_path / "large.csv"
-        with open(csv_path, 'w') as f:
+        with open(csv_path, "w") as f:
             f.write("id,value,category\n")
             for i in range(100000):  # Large number of rows
                 f.write(f"{i},{i * 100.5},cat_{i % 100}\n")
@@ -596,10 +594,11 @@ class TestProcessorStreaming:
             processor = Processor()
             processor.load_csv(sample_csv_file)
             # Stream query results with callback
-            list(processor.stream_query(
-                "SELECT * FROM data",
-                progress_callback=progress_callback
-            ))
+            list(
+                processor.stream_query(
+                    "SELECT * FROM data", progress_callback=progress_callback
+                )
+            )
             assert len(progress_updates) > 0
 
     def test_pause_resume_streaming(self, sample_csv_file):
@@ -631,6 +630,7 @@ class TestProcessorStreaming:
 #  SQL Query Tests
 # ========================================================================
 
+
 class TestProcessorSQL:
     """Test SQL query functionality"""
 
@@ -640,7 +640,7 @@ class TestProcessorSQL:
             processor = Processor()
             processor.load_csv(sample_csv_file)
             result = processor.sql("SELECT COUNT(*) as cnt FROM data")
-            assert result['cnt'][0] == 5
+            assert result["cnt"][0] == 5
 
     def test_parameterized_query(self, sample_csv_file):
         """Test parameterized queries for SQL injection prevention"""
@@ -648,8 +648,7 @@ class TestProcessorSQL:
             processor = Processor()
             processor.load_csv(sample_csv_file)
             result = processor.sql(
-                "SELECT * FROM data WHERE region = ?",
-                parameters=['North']
+                "SELECT * FROM data WHERE region = ?", parameters=["North"]
             )
             assert len(result) == 2  # 2 records in North region
 
@@ -671,6 +670,7 @@ class TestProcessorSQL:
 #  Backward Compatibility Tests
 # ========================================================================
 
+
 class TestProcessorBackwardCompatibility:
     """Test backward compatibility with data-processor.py"""
 
@@ -688,8 +688,8 @@ class TestProcessorBackwardCompatibility:
             processor = Processor()
             processor.load_csv(sample_csv_file)
             schema = processor.schema()
-            assert 'id' in schema
-            assert 'name' in schema
+            assert "id" in schema
+            assert "name" in schema
 
     def test_coverage_method(self, sample_csv_file):
         """Test coverage method exists and works"""
@@ -697,27 +697,31 @@ class TestProcessorBackwardCompatibility:
             processor = Processor()
             processor.load_csv(sample_csv_file)
             coverage = processor.coverage()
-            assert 'column' in coverage
-            assert 'coverage_%' in coverage
+            assert "column" in coverage
+            assert "coverage_%" in coverage
 
     def test_pivot_method(self, sample_csv_file):
         """Test pivot method exists and works"""
         with pytest.raises((ImportError, AttributeError)):
             processor = Processor()
             processor.load_csv(sample_csv_file)
-            processor.add_column('tier', """
+            processor.add_column(
+                "tier",
+                """
                 CASE
                     WHEN CAST(amount AS DOUBLE) >= 2000 THEN 'GOLD'
                     ELSE 'SILVER'
                 END
-            """)
-            result = processor.pivot('region', 'tier', 'amount', 'SUM')
-            assert 'region' in result
+            """,
+            )
+            result = processor.pivot("region", "tier", "amount", "SUM")
+            assert "region" in result
 
 
 # ========================================================================
 #  Error Handling Tests
 # ========================================================================
+
 
 class TestProcessorErrorHandling:
     """Test error handling and validation"""
@@ -726,7 +730,7 @@ class TestProcessorErrorHandling:
         """Test handling of non-existent CSV file"""
         with pytest.raises((ImportError, AttributeError, FileNotFoundError)):
             processor = Processor()
-            processor.load_csv('/nonexistent/file.csv')
+            processor.load_csv("/nonexistent/file.csv")
 
     def test_invalid_sql_query(self, sample_csv_file):
         """Test handling of invalid SQL query"""
@@ -739,7 +743,7 @@ class TestProcessorErrorHandling:
         """Test handling when memory limit is exceeded"""
         # Create a file that would exceed small memory limit
         csv_path = tmp_path / "big.csv"
-        with open(csv_path, 'w') as f:
+        with open(csv_path, "w") as f:
             f.write("id,data\n")
             for i in range(10000):
                 f.write(f"{i},{'x' * 1000}\n")  # Large data
@@ -773,6 +777,7 @@ class TestProcessorErrorHandling:
 #  Statistics and Metadata Tests
 # ========================================================================
 
+
 class TestProcessorStatistics:
     """Test statistics and metadata functionality"""
 
@@ -782,9 +787,9 @@ class TestProcessorStatistics:
             processor = Processor()
             processor.load_csv(sample_csv_file)
             stats = processor.get_statistics()
-            assert 'row_count' in stats
-            assert 'column_count' in stats
-            assert stats['row_count'] == 5
+            assert "row_count" in stats
+            assert "column_count" in stats
+            assert stats["row_count"] == 5
 
     def test_get_query_history(self, sample_csv_file):
         """Test query history tracking"""

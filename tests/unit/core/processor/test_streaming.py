@@ -8,9 +8,7 @@ large datasets with memory management, progress tracking, and state control.
 import pytest
 import threading
 import time
-from typing import List, Dict, Any, Generator
-from unittest.mock import Mock, MagicMock, patch
-from dataclasses import dataclass
+from unittest.mock import Mock, patch
 
 # These imports will fail until GREEN phase implementation
 # This is expected in RED phase
@@ -141,10 +139,11 @@ class TestStreamProcessor:
         """Test stream_query passes parameters correctly"""
         mock_db_connection.stream.return_value = iter([])
 
-        list(stream_processor.stream_query(
-            "SELECT * FROM test WHERE id = ?",
-            parameters=[42]
-        ))
+        list(
+            stream_processor.stream_query(
+                "SELECT * FROM test WHERE id = ?", parameters=[42]
+            )
+        )
 
         mock_db_connection.stream.assert_called_once()
         call_args = mock_db_connection.stream.call_args
@@ -192,13 +191,17 @@ class TestStreamProcessor:
         with pytest.raises(MemoryError, match="Memory limit exceeded"):
             list(stream_processor.stream_query("SELECT * FROM large_table"))
 
-    def test_auto_adjust_chunk_size_on_memory_pressure(self, stream_processor, mock_db_connection):
+    def test_auto_adjust_chunk_size_on_memory_pressure(
+        self, stream_processor, mock_db_connection
+    ):
         """Test chunk size reduces when memory pressure detected"""
         stream_processor.auto_adjust_chunk_size = True
         stream_processor.chunk_size = 10000
 
         # Simulate memory pressure
-        with patch.object(stream_processor, 'get_current_memory_usage', return_value=450.0):
+        with patch.object(
+            stream_processor, "get_current_memory_usage", return_value=450.0
+        ):
             stream_processor._adjust_chunk_size_for_memory()
 
         assert stream_processor.chunk_size < 10000
@@ -208,7 +211,9 @@ class TestStreamProcessor:
         stream_processor.auto_adjust_chunk_size = False
         stream_processor.chunk_size = 10000
 
-        with patch.object(stream_processor, 'get_current_memory_usage', return_value=450.0):
+        with patch.object(
+            stream_processor, "get_current_memory_usage", return_value=450.0
+        ):
             stream_processor._adjust_chunk_size_for_memory()
 
         assert stream_processor.chunk_size == 10000
@@ -218,7 +223,9 @@ class TestStreamProcessor:
         stream_processor.chunk_size = 100
 
         # Simulate high memory pressure
-        with patch.object(stream_processor, 'get_current_memory_usage', return_value=500.0):
+        with patch.object(
+            stream_processor, "get_current_memory_usage", return_value=500.0
+        ):
             stream_processor._adjust_chunk_size_for_memory()
 
         assert stream_processor.chunk_size >= 100  # Minimum chunk size
@@ -264,7 +271,9 @@ class TestStreamProcessor:
         assert stream_processor.state == StreamingState.CANCELLED
         # Resources should be cleaned up
 
-    def test_resume_continues_from_paused_position(self, stream_processor, mock_db_connection):
+    def test_resume_continues_from_paused_position(
+        self, stream_processor, mock_db_connection
+    ):
         """Test resume continues from where it was paused"""
         chunks = [
             [{"id": i} for i in range(3)],
@@ -290,8 +299,10 @@ class TestStreamProcessor:
 
         # The behavior depends on implementation
         # Either continues same generator or needs restart
-        assert stream_processor.state == StreamingState.STREAMING or \
-               stream_processor.state == StreamingState.IDLE
+        assert (
+            stream_processor.state == StreamingState.STREAMING
+            or stream_processor.state == StreamingState.IDLE
+        )
 
     # ========== Error Handling Tests ==========
 
@@ -326,7 +337,10 @@ class TestStreamProcessor:
             t.join()
 
         # State should be valid (either STREAMING or PAUSED)
-        assert stream_processor.state in [StreamingState.STREAMING, StreamingState.PAUSED]
+        assert stream_processor.state in [
+            StreamingState.STREAMING,
+            StreamingState.PAUSED,
+        ]
 
 
 class TestProgressTracker:
@@ -410,12 +424,12 @@ class TestProgressTracker:
         info = progress_tracker.get_progress()
 
         assert isinstance(info, ProgressInfo)
-        assert hasattr(info, 'rows_processed')
-        assert hasattr(info, 'bytes_processed')
-        assert hasattr(info, 'percentage')
-        assert hasattr(info, 'eta_seconds')
-        assert hasattr(info, 'current_operation')
-        assert hasattr(info, 'elapsed_seconds')
+        assert hasattr(info, "rows_processed")
+        assert hasattr(info, "bytes_processed")
+        assert hasattr(info, "percentage")
+        assert hasattr(info, "eta_seconds")
+        assert hasattr(info, "current_operation")
+        assert hasattr(info, "elapsed_seconds")
 
     def test_current_operation_tracking(self, progress_tracker):
         """Test tracking current operation"""
@@ -530,6 +544,7 @@ class TestStreamingState:
 
 # ========== Integration Tests ==========
 
+
 class TestStreamProcessorIntegration:
     """Integration tests for StreamProcessor with DatabaseConnection"""
 
@@ -552,7 +567,7 @@ class TestStreamProcessorIntegration:
         for i in range(100):
             db.execute(
                 "INSERT INTO large_table VALUES (?, ?, ?)",
-                parameters=[i, f"name_{i}", i * 1.5]
+                parameters=[i, f"name_{i}", i * 1.5],
             )
 
         yield db
@@ -589,7 +604,10 @@ class TestStreamProcessorIntegration:
         list(processor.stream_query("SELECT * FROM large_table"))
 
         # Progress should have been tracked
-        assert len(progress_updates) > 0 or processor.progress_tracker.get_progress().rows_processed == 100
+        assert (
+            len(progress_updates) > 0
+            or processor.progress_tracker.get_progress().rows_processed == 100
+        )
 
     def test_state_transitions_with_real_query(self, real_db):
         """Test state transitions during real query"""

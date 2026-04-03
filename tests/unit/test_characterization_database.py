@@ -6,7 +6,6 @@ to ensure behavior preservation during Phase 2 API layer integration.
 """
 
 import pytest
-import threading
 from src.core.database import DatabaseConnection, ConnectionError, QueryExecutionError
 
 

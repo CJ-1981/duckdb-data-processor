@@ -6,9 +6,7 @@ Async tasks for workflow execution using Celery.
 
 from datetime import datetime
 from typing import Dict, Any
-from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.tasks import celery_app, CELERY_AVAILABLE
 
@@ -23,15 +21,17 @@ from src.api.services.job import JobService
 
 @shared_task(
     bind=True,
-    name='execute_workflow_task',
+    name="execute_workflow_task",
     priority=5,
     autoretry_for=(Exception,),
-    retry_kwargs={'max_retries': 3, 'countdown': 60},
+    retry_kwargs={"max_retries": 3, "countdown": 60},
     retry_backoff=True,
     retry_backoff_max=600,
     retry_jitter=True,
 )
-def execute_workflow_task(self, job_id: str, workflow_definition: Dict[str, Any]) -> Dict[str, Any]:
+def execute_workflow_task(
+    self, job_id: str, workflow_definition: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Execute a workflow as a background Celery task.
 
@@ -50,11 +50,12 @@ def execute_workflow_task(self, job_id: str, workflow_definition: Dict[str, Any]
         return {
             "job_id": job_id,
             "status": "failed",
-            "error_message": "Invalid workflow definition: missing 'nodes' field"
+            "error_message": "Invalid workflow definition: missing 'nodes' field",
         }
 
     # Check for test mode (no event loop available)
     import asyncio
+
     try:
         loop = asyncio.get_running_loop()
         # We're in an async context (test mode)
@@ -69,7 +70,7 @@ def execute_workflow_task(self, job_id: str, workflow_definition: Dict[str, Any]
                     return {
                         "job_id": job_id,
                         "status": "failed",
-                        "error_message": f"Data source node '{node.get('id')}' missing path or query"
+                        "error_message": f"Data source node '{node.get('id')}' missing path or query",
                     }
 
         # Return success result for testing
@@ -77,14 +78,13 @@ def execute_workflow_task(self, job_id: str, workflow_definition: Dict[str, Any]
             "job_id": job_id,
             "status": "completed",
             "progress": 100.0,
-            "result": {"row_count": 1000}
+            "result": {"row_count": 1000},
         }
 
     except RuntimeError:
         # No running loop, use production execution
         from src.api.models.base import get_async_session
         from src.api.models.job import JobStatus
-        from src.api.models.user import User
         from sqlalchemy import select
 
         async def _execute():
@@ -93,15 +93,11 @@ def execute_workflow_task(self, job_id: str, workflow_definition: Dict[str, Any]
 
                 # Update job status to running
                 await job_service.update_job_status(
-                    job_id,
-                    JobStatus.running,
-                    started_at=datetime.utcnow()
+                    job_id, JobStatus.running, started_at=datetime.utcnow()
                 )
 
                 # Check if job was cancelled before starting
-                result = await db.execute(
-                    select(Job.status).where(Job.id == job_id)
-                )
+                result = await db.execute(select(Job.status).where(Job.id == job_id))
                 current_status = result.scalar_one_or_none()
 
                 if current_status == JobStatus.cancelled:
@@ -109,13 +105,9 @@ def execute_workflow_task(self, job_id: str, workflow_definition: Dict[str, Any]
                         job_id,
                         JobStatus.cancelled,
                         completed_at=datetime.utcnow(),
-                        progress=100.0
+                        progress=100.0,
                     )
-                    return {
-                        "job_id": job_id,
-                        "status": "cancelled",
-                        "progress": 100.0
-                    }
+                    return {"job_id": job_id, "status": "cancelled", "progress": 100.0}
 
                 try:
                     # TODO: Implement actual workflow execution using processor (P2-T009)
@@ -130,14 +122,14 @@ def execute_workflow_task(self, job_id: str, workflow_definition: Dict[str, Any]
                         JobStatus.completed,
                         completed_at=datetime.utcnow(),
                         progress=100.0,
-                        result=result
+                        result=result,
                     )
 
                     return {
                         "job_id": job_id,
                         "status": "completed",
                         "progress": 100.0,
-                        "result": result
+                        "result": result,
                     }
 
                 except Exception as e:
@@ -146,13 +138,13 @@ def execute_workflow_task(self, job_id: str, workflow_definition: Dict[str, Any]
                         job_id,
                         JobStatus.failed,
                         completed_at=datetime.utcnow(),
-                        error_message=str(e)
+                        error_message=str(e),
                     )
 
                     return {
                         "job_id": job_id,
                         "status": "failed",
-                        "error_message": str(e)
+                        "error_message": str(e),
                     }
 
         return asyncio.run(_execute())
@@ -161,7 +153,8 @@ def execute_workflow_task(self, job_id: str, workflow_definition: Dict[str, Any]
 # Register task with celery_app
 if not CELERY_AVAILABLE:
     from src.api.tasks import celery_app
-    celery_app.register_task('execute_workflow_task', execute_workflow_task)
+
+    celery_app.register_task("execute_workflow_task", execute_workflow_task)
 
 
-__all__ = ['execute_workflow_task']
+__all__ = ["execute_workflow_task"]

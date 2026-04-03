@@ -25,6 +25,7 @@ from src.core.database import DatabaseConnection
 #  Integration Test Fixtures
 # =========================================================================
 
+
 @pytest.fixture
 def sample_csv_file():
     """Create a sample CSV file for testing"""
@@ -36,7 +37,7 @@ def sample_csv_file():
 5,Emma,32,2100.75,false,2023-05-12
 """
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
         f.write(csv_data)
         temp_path = f.name
 
@@ -49,20 +50,22 @@ def sample_csv_file():
 @pytest.fixture
 def large_csv_file():
     """Create a large CSV file for streaming tests"""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
         writer = csv.writer(f)
         # Header
-        writer.writerow(['id', 'name', 'value', 'timestamp', 'category'])
+        writer.writerow(["id", "name", "value", "timestamp", "category"])
 
         # Write many rows
         for i in range(5000):
-            writer.writerow([
-                i,
-                f'Item_{i}',
-                i * 100.5,
-                f'2023-{(i % 12) + 1:02d}-{(i % 28) + 1:02d}',
-                f'Cat_{i % 5}'
-            ])
+            writer.writerow(
+                [
+                    i,
+                    f"Item_{i}",
+                    i * 100.5,
+                    f"2023-{(i % 12) + 1:02d}-{(i % 28) + 1:02d}",
+                    f"Cat_{i % 5}",
+                ]
+            )
 
         temp_path = f.name
 
@@ -84,6 +87,7 @@ def in_memory_database():
 def temp_database():
     """Create a temporary file-based DuckDB database"""
     import uuid
+
     db_path = f"/tmp/test_db_{uuid.uuid4()}.duckdb"
 
     db = DatabaseConnection(db_path)
@@ -98,6 +102,7 @@ def temp_database():
 #  End-to-End Integration Tests
 # ========================================================================
 
+
 class TestCSVConnectorIntegration:
     """End-to-end integration tests for CSV connector"""
 
@@ -109,24 +114,22 @@ class TestCSVConnectorIntegration:
         connector.import_to_duckdb(
             csv_path=sample_csv_file,
             db_connection=in_memory_database,
-            table_name='users'
+            table_name="users",
         )
 
         # Verify data was imported
-        result = in_memory_database.execute(
-            "SELECT COUNT(*) as count FROM users"
-        )
-        assert result[0]['count'] == 5
+        result = in_memory_database.execute("SELECT COUNT(*) as count FROM users")
+        assert result[0]["count"] == 5
 
         # Verify schema
         schema_result = in_memory_database.execute("DESCRIBE users")
-        column_names = [row['column_name'] for row in schema_result]
-        assert 'id' in column_names
-        assert 'name' in column_names
-        assert 'age' in column_names
-        assert 'amount' in column_names
-        assert 'active' in column_names
-        assert 'join_date' in column_names
+        column_names = [row["column_name"] for row in schema_result]
+        assert "id" in column_names
+        assert "name" in column_names
+        assert "age" in column_names
+        assert "amount" in column_names
+        assert "active" in column_names
+        assert "join_date" in column_names
 
     def test_csv_data_accuracy_after_import(self, sample_csv_file, in_memory_database):
         """Test that data is accurately imported"""
@@ -135,16 +138,14 @@ class TestCSVConnectorIntegration:
         connector.import_to_duckdb(
             csv_path=sample_csv_file,
             db_connection=in_memory_database,
-            table_name='users'
+            table_name="users",
         )
 
         # Check specific row (DuckDB converts types, so age will be INTEGER)
-        result = in_memory_database.execute(
-            "SELECT * FROM users WHERE name = 'Alice'"
-        )
+        result = in_memory_database.execute("SELECT * FROM users WHERE name = 'Alice'")
         assert len(result) == 1
         # DuckDB may have converted the type - check with flexible comparison
-        assert result[0]['age'] in (30, '30')  # Accept either type
+        assert result[0]["age"] in (30, "30")  # Accept either type
 
     def test_type_preservation_after_import(self, sample_csv_file, in_memory_database):
         """Test that data types are preserved during import"""
@@ -153,19 +154,19 @@ class TestCSVConnectorIntegration:
         connector.import_to_duckdb(
             csv_path=sample_csv_file,
             db_connection=in_memory_database,
-            table_name='users'
+            table_name="users",
         )
 
         # Check data types
         schema_result = in_memory_database.execute("DESCRIBE users")
 
         # Build column type mapping
-        column_types = {row['column_name']: row['column_type'] for row in schema_result}
+        column_types = {row["column_name"]: row["column_type"] for row in schema_result}
 
         # Verify types (DuckDB may use different type names)
-        assert 'id' in column_types
-        assert 'name' in column_types
-        assert 'amount' in column_types
+        assert "id" in column_types
+        assert "name" in column_types
+        assert "amount" in column_types
 
     def test_multiple_csv_imports_to_same_database(self, in_memory_database):
         """Test importing multiple CSV files to the same database"""
@@ -176,7 +177,7 @@ class TestCSVConnectorIntegration:
 1,Alice
 2,Bob
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(csv_data_1)
             csv_path_1 = f.name
 
@@ -185,7 +186,7 @@ class TestCSVConnectorIntegration:
 1,100.50
 2,200.75
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(csv_data_2)
             csv_path_2 = f.name
 
@@ -194,26 +195,26 @@ class TestCSVConnectorIntegration:
             connector.import_to_duckdb(
                 csv_path=csv_path_1,
                 db_connection=in_memory_database,
-                table_name='table1'
+                table_name="table1",
             )
 
             connector.import_to_duckdb(
                 csv_path=csv_path_2,
                 db_connection=in_memory_database,
-                table_name='table2'
+                table_name="table2",
             )
 
             # Verify both tables exist
             tables = in_memory_database.execute("SHOW TABLES")
-            table_names = [row['name'] for row in tables]
-            assert 'table1' in table_names
-            assert 'table2' in table_names
+            table_names = [row["name"] for row in tables]
+            assert "table1" in table_names
+            assert "table2" in table_names
 
             # Verify data in both tables
             count1 = in_memory_database.execute("SELECT COUNT(*) as count FROM table1")
             count2 = in_memory_database.execute("SELECT COUNT(*) as count FROM table2")
-            assert count1[0]['count'] == 2
-            assert count2[0]['count'] == 2
+            assert count1[0]["count"] == 2
+            assert count2[0]["count"] == 2
 
         finally:
             Path(csv_path_1).unlink(missing_ok=True)
@@ -230,12 +231,12 @@ class TestLargeFileStreaming:
         connector.import_to_duckdb(
             csv_path=large_csv_file,
             db_connection=temp_database,
-            table_name='large_data'
+            table_name="large_data",
         )
 
         # Verify all rows were imported
         result = temp_database.execute("SELECT COUNT(*) as count FROM large_data")
-        assert result[0]['count'] == 5000
+        assert result[0]["count"] == 5000
 
     def test_streaming_with_progress_reporting(self, large_csv_file, temp_database):
         """Test streaming with progress callbacks"""
@@ -249,8 +250,8 @@ class TestLargeFileStreaming:
         connector.import_to_duckdb(
             csv_path=large_csv_file,
             db_connection=temp_database,
-            table_name='large_data',
-            progress_callback=progress_callback
+            table_name="large_data",
+            progress_callback=progress_callback,
         )
 
         # Verify progress was reported
@@ -258,9 +259,9 @@ class TestLargeFileStreaming:
 
         # Check final progress
         final_progress = progress_updates[-1]
-        assert final_progress['rows_processed'] == 5000
-        assert final_progress['total_rows'] == 5000
-        assert final_progress['percentage'] >= 99.0
+        assert final_progress["rows_processed"] == 5000
+        assert final_progress["total_rows"] == 5000
+        assert final_progress["percentage"] >= 99.0
 
     def test_streaming_handles_interruption(self, large_csv_file, temp_database):
         """Test that streaming can handle interruption gracefully"""
@@ -270,12 +271,12 @@ class TestLargeFileStreaming:
         connector.import_to_duckdb(
             csv_path=large_csv_file,
             db_connection=temp_database,
-            table_name='large_data'
+            table_name="large_data",
         )
 
         # Verify partial data if needed (or full data in this case)
         result = temp_database.execute("SELECT COUNT(*) as count FROM large_data")
-        assert result[0]['count'] > 0
+        assert result[0]["count"] > 0
 
 
 class TestCSVParsingEdgeCases:
@@ -288,7 +289,7 @@ class TestCSVParsingEdgeCases:
 2,Product B,"Description with ""quotes"""
 3,Product C,"Description with text"
 '''
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(csv_data)
             temp_path = f.name
 
@@ -297,13 +298,13 @@ class TestCSVParsingEdgeCases:
             connector.import_to_duckdb(
                 csv_path=temp_path,
                 db_connection=in_memory_database,
-                table_name='products'
+                table_name="products",
             )
 
             # Verify data was parsed correctly
             result = in_memory_database.execute("SELECT * FROM products WHERE id = 1")
             assert len(result) == 1
-            assert 'commas' in result[0]['description']
+            assert "commas" in result[0]["description"]
 
         finally:
             Path(temp_path).unlink(missing_ok=True)
@@ -311,17 +312,18 @@ class TestCSVParsingEdgeCases:
     def test_csv_with_different_encodings(self, in_memory_database):
         """Test CSV with non-UTF8 encoding"""
         # Create CSV with Latin-1 encoding
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv',
-                                         encoding='latin-1', delete=False) as f:
-            f.write('id,name\n1,Café\n2,München\n3,São Paulo\n')
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", encoding="latin-1", delete=False
+        ) as f:
+            f.write("id,name\n1,Café\n2,München\n3,São Paulo\n")
             temp_path = f.name
 
         try:
-            connector = CSVConnector(encoding='latin-1')
+            connector = CSVConnector(encoding="latin-1")
             connector.import_to_duckdb(
                 csv_path=temp_path,
                 db_connection=in_memory_database,
-                table_name='cities'
+                table_name="cities",
             )
 
             # Verify special characters preserved
@@ -339,21 +341,19 @@ class TestCSVParsingEdgeCases:
 3,Item C,300
 4,Item D,400
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(csv_data)
             temp_path = f.name
 
         try:
             connector = CSVConnector()
             connector.import_to_duckdb(
-                csv_path=temp_path,
-                db_connection=in_memory_database,
-                table_name='items'
+                csv_path=temp_path, db_connection=in_memory_database, table_name="items"
             )
 
             # Should handle inconsistent rows
             result = in_memory_database.execute("SELECT COUNT(*) as count FROM items")
-            assert result[0]['count'] == 4
+            assert result[0]["count"] == 4
 
         finally:
             Path(temp_path).unlink(missing_ok=True)
@@ -370,16 +370,14 @@ class TestMissingValueHandling:
 3,,300
 4,Item D,
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(csv_data)
             temp_path = f.name
 
         try:
             connector = CSVConnector()
             connector.import_to_duckdb(
-                csv_path=temp_path,
-                db_connection=in_memory_database,
-                table_name='items'
+                csv_path=temp_path, db_connection=in_memory_database, table_name="items"
             )
 
             # Check NULL handling
@@ -400,21 +398,19 @@ class TestMissingValueHandling:
 4,Item D,NaN
 5,Item E,
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             f.write(csv_data)
             temp_path = f.name
 
         try:
             connector = CSVConnector()
             connector.import_to_duckdb(
-                csv_path=temp_path,
-                db_connection=in_memory_database,
-                table_name='items'
+                csv_path=temp_path, db_connection=in_memory_database, table_name="items"
             )
 
             # Should import all rows
             result = in_memory_database.execute("SELECT COUNT(*) as count FROM items")
-            assert result[0]['count'] == 5
+            assert result[0]["count"] == 5
 
         finally:
             Path(temp_path).unlink(missing_ok=True)
@@ -430,20 +426,18 @@ class TestQueryAfterImport:
         connector.import_to_duckdb(
             csv_path=sample_csv_file,
             db_connection=in_memory_database,
-            table_name='users'
+            table_name="users",
         )
 
         # Test filter query
-        result = in_memory_database.execute(
-            "SELECT * FROM users WHERE age > 30"
-        )
+        result = in_memory_database.execute("SELECT * FROM users WHERE age > 30")
         assert len(result) == 2  # Charlie (35) and Emma (32)
 
         # Test aggregation
         result = in_memory_database.execute(
             "SELECT COUNT(*) as count FROM users WHERE active = 'true'"
         )
-        assert result[0]['count'] == 3
+        assert result[0]["count"] == 3
 
     def test_complex_query_after_import(self, sample_csv_file, in_memory_database):
         """Test complex queries after CSV import"""
@@ -452,7 +446,7 @@ class TestQueryAfterImport:
         connector.import_to_duckdb(
             csv_path=sample_csv_file,
             db_connection=in_memory_database,
-            table_name='users'
+            table_name="users",
         )
 
         # Test JOIN-like operation (self-join for demo)
@@ -472,7 +466,7 @@ class TestQueryAfterImport:
         connector.import_to_duckdb(
             csv_path=sample_csv_file,
             db_connection=in_memory_database,
-            table_name='users'
+            table_name="users",
         )
 
         # Export to new table
@@ -480,8 +474,10 @@ class TestQueryAfterImport:
             "CREATE TABLE active_users AS SELECT * FROM users WHERE active = 'true'"
         )
 
-        result = in_memory_database.execute("SELECT COUNT(*) as count FROM active_users")
-        assert result[0]['count'] == 3
+        result = in_memory_database.execute(
+            "SELECT COUNT(*) as count FROM active_users"
+        )
+        assert result[0]["count"] == 3
 
 
 class TestPerformanceAndScalability:
@@ -497,13 +493,13 @@ class TestPerformanceAndScalability:
         connector.import_to_duckdb(
             csv_path=large_csv_file,
             db_connection=temp_database,
-            table_name='performance_test'
+            table_name="performance_test",
         )
         elapsed_time = time.time() - start_time
 
         # Verify import completed
         result = temp_database.execute("SELECT COUNT(*) as count FROM performance_test")
-        assert result[0]['count'] == 5000
+        assert result[0]["count"] == 5000
 
         # Performance assertion (should complete in reasonable time)
         # This is a loose assertion; adjust based on environment
@@ -517,8 +513,8 @@ class TestPerformanceAndScalability:
         connector.import_to_duckdb(
             csv_path=large_csv_file,
             db_connection=temp_database,
-            table_name='memory_test'
+            table_name="memory_test",
         )
 
         result = temp_database.execute("SELECT COUNT(*) as count FROM memory_test")
-        assert result[0]['count'] == 5000
+        assert result[0]["count"] == 5000

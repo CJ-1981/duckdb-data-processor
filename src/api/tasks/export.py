@@ -6,9 +6,7 @@ Async tasks for data export using Celery.
 
 from datetime import datetime
 from typing import Dict, Any
-from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.tasks import celery_app, CELERY_AVAILABLE
 
@@ -17,20 +15,21 @@ if CELERY_AVAILABLE:
 else:
     from src.api.tasks.mock_celery import shared_task
 
-from src.api.models.job import Job
 from src.api.services.job import JobService
 
 
 @shared_task(
     bind=True,
-    name='export_data_task',
+    name="export_data_task",
     priority=3,  # Lower priority than workflow execution
     autoretry_for=(Exception,),
-    retry_kwargs={'max_retries': 2, 'countdown': 30},
+    retry_kwargs={"max_retries": 2, "countdown": 30},
     retry_backoff=True,
     time_limit=1800,  # 30 minutes
 )
-def export_data_task(self, job_id: str, export_config: Dict[str, Any]) -> Dict[str, Any]:
+def export_data_task(
+    self, job_id: str, export_config: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Export data as a background Celery task.
 
@@ -49,7 +48,7 @@ def export_data_task(self, job_id: str, export_config: Dict[str, Any]) -> Dict[s
         return {
             "job_id": job_id,
             "status": "failed",
-            "error_message": "Export configuration is required"
+            "error_message": "Export configuration is required",
         }
 
     # Validate export format
@@ -59,11 +58,12 @@ def export_data_task(self, job_id: str, export_config: Dict[str, Any]) -> Dict[s
         return {
             "job_id": job_id,
             "status": "failed",
-            "error_message": f"Unsupported export format: {format_type}. Supported: parquet, csv, json"
+            "error_message": f"Unsupported export format: {format_type}. Supported: parquet, csv, json",
         }
 
     # Check for test mode (no event loop available)
     import asyncio
+
     try:
         loop = asyncio.get_running_loop()
         # We're in an async context (test mode)
@@ -72,7 +72,7 @@ def export_data_task(self, job_id: str, export_config: Dict[str, Any]) -> Dict[s
             "job_id": job_id,
             "status": "completed",
             "progress": 100.0,
-            "result": {"row_count": 5000, "file_size": 1024000}
+            "result": {"row_count": 5000, "file_size": 1024000},
         }
 
     except RuntimeError:
@@ -86,9 +86,7 @@ def export_data_task(self, job_id: str, export_config: Dict[str, Any]) -> Dict[s
 
                 # Update job status to running
                 await job_service.update_job_status(
-                    job_id,
-                    JobStatus.running,
-                    started_at=datetime.utcnow()
+                    job_id, JobStatus.running, started_at=datetime.utcnow()
                 )
 
                 try:
@@ -104,14 +102,14 @@ def export_data_task(self, job_id: str, export_config: Dict[str, Any]) -> Dict[s
                         JobStatus.completed,
                         completed_at=datetime.utcnow(),
                         progress=100.0,
-                        result=result
+                        result=result,
                     )
 
                     return {
                         "job_id": job_id,
                         "status": "completed",
                         "progress": 100.0,
-                        "result": result
+                        "result": result,
                     }
 
                 except Exception as e:
@@ -120,13 +118,13 @@ def export_data_task(self, job_id: str, export_config: Dict[str, Any]) -> Dict[s
                         job_id,
                         JobStatus.failed,
                         completed_at=datetime.utcnow(),
-                        error_message=str(e)
+                        error_message=str(e),
                     )
 
                     return {
                         "job_id": job_id,
                         "status": "failed",
-                        "error_message": str(e)
+                        "error_message": str(e),
                     }
 
         return asyncio.run(_export())
@@ -135,7 +133,8 @@ def export_data_task(self, job_id: str, export_config: Dict[str, Any]) -> Dict[s
 # Register task with celery_app
 if not CELERY_AVAILABLE:
     from src.api.tasks import celery_app
-    celery_app.register_task('export_data_task', export_data_task)
+
+    celery_app.register_task("export_data_task", export_data_task)
 
 
-__all__ = ['export_data_task']
+__all__ = ["export_data_task"]

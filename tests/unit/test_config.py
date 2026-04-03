@@ -9,12 +9,8 @@ All tests should FAIL initially (RED phase) until implementation is complete.
 """
 
 import pytest
-from pathlib import Path
-from typing import Any, Dict
-from unittest.mock import Mock, patch, MagicMock
 import os
 import yaml
-import tempfile
 import threading
 import time
 
@@ -22,6 +18,7 @@ import time
 # ============================================================================
 # FIXTURES - Mock objects and test data
 # ============================================================================
+
 
 @pytest.fixture
 def valid_config_dict():
@@ -36,21 +33,17 @@ def valid_config_dict():
             "port": 5432,
             "name": "testdb",
             "user": "testuser",
-            "password": "testpass"
+            "password": "testpass",
         },
-        "redis": {
-            "host": "localhost",
-            "port": 6379,
-            "db": 0
-        },
+        "redis": {"host": "localhost", "port": 6379, "db": 0},
         "logging": {
             "level": "INFO",
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         },
         "plugins": {
             "paths": ["/usr/local/lib/plugins", "~/.local/plugins"],
-            "auto_load": True
-        }
+            "auto_load": True,
+        },
     }
 
 
@@ -62,7 +55,7 @@ def valid_yaml_file(tmp_path, valid_config_dict):
     THEN return path to valid YAML file
     """
     config_file = tmp_path / "config.yaml"
-    with open(config_file, 'w') as f:
+    with open(config_file, "w") as f:
         yaml.dump(valid_config_dict, f)
     return config_file
 
@@ -75,7 +68,7 @@ def invalid_yaml_file(tmp_path):
     THEN return path to invalid YAML file
     """
     config_file = tmp_path / "invalid_config.yaml"
-    with open(config_file, 'w') as f:
+    with open(config_file, "w") as f:
         f.write("invalid: yaml: content:\n  - broken\n    - structure\n")
     return config_file
 
@@ -88,23 +81,24 @@ def config_with_env_overrides(valid_config_dict):
     THEN environment variables override YAML values
     """
     # Set environment variables
-    os.environ['APP_DATABASE_HOST'] = 'override-host'
-    os.environ['APP_DATABASE_PORT'] = '9999'
-    os.environ['APP_REDIS_HOST'] = 'override-redis'
-    os.environ['APP_LOGGING_LEVEL'] = 'DEBUG'
+    os.environ["APP_DATABASE_HOST"] = "override-host"
+    os.environ["APP_DATABASE_PORT"] = "9999"
+    os.environ["APP_REDIS_HOST"] = "override-redis"
+    os.environ["APP_LOGGING_LEVEL"] = "DEBUG"
 
     yield valid_config_dict
 
     # Cleanup
-    del os.environ['APP_DATABASE_HOST']
-    del os.environ['APP_DATABASE_PORT']
-    del os.environ['APP_REDIS_HOST']
-    del os.environ['APP_LOGGING_LEVEL']
+    del os.environ["APP_DATABASE_HOST"]
+    del os.environ["APP_DATABASE_PORT"]
+    del os.environ["APP_REDIS_HOST"]
+    del os.environ["APP_LOGGING_LEVEL"]
 
 
 # ============================================================================
 # TEST CLASS 1: Configuration Loading from YAML (Acceptance Criteria #1)
 # ============================================================================
+
 
 class TestConfigurationLoading:
     """
@@ -149,7 +143,7 @@ class TestConfigurationLoading:
 
         # Create base config
         base_config = tmp_path / "base.yaml"
-        with open(base_config, 'w') as f:
+        with open(base_config, "w") as f:
             yaml.dump(valid_config_dict, f)
 
         # Create override config
@@ -157,10 +151,10 @@ class TestConfigurationLoading:
         override_data = {
             "database": {
                 "host": "override-host",
-                "port": 3306  # Different port
+                "port": 3306,  # Different port
             }
         }
-        with open(override_config, 'w') as f:
+        with open(override_config, "w") as f:
             yaml.dump(override_data, f)
 
         # Load with override
@@ -238,6 +232,7 @@ class TestConfigurationLoading:
 # TEST CLASS 2: Environment Variable Override (Acceptance Criteria #2)
 # ============================================================================
 
+
 class TestEnvironmentVariableOverrides:
     """
     GIVEN configuration is loaded from YAML
@@ -255,7 +250,7 @@ class TestEnvironmentVariableOverrides:
         - Environment variable override support
         """
         # Set environment variable
-        os.environ['APP_DATABASE_HOST'] = 'override-host'
+        os.environ["APP_DATABASE_HOST"] = "override-host"
 
         try:
             from src.core.config.loader import Config
@@ -264,9 +259,9 @@ class TestEnvironmentVariableOverrides:
             config = manager.load()
 
             # Verify override
-            assert config.database.host == 'override-host'
+            assert config.database.host == "override-host"
         finally:
-            del os.environ['APP_DATABASE_HOST']
+            del os.environ["APP_DATABASE_HOST"]
 
     def test_environment_variable_override_nested_values(self, valid_yaml_file):
         """
@@ -274,9 +269,9 @@ class TestEnvironmentVariableOverrides:
         WHEN environment variables use dot notation
         THEN nested values are correctly overridden
         """
-        os.environ['APP_DATABASE_HOST'] = 'env-host'
-        os.environ['APP_DATABASE_PORT'] = '9999'
-        os.environ['APP_REDIS_DB'] = '5'
+        os.environ["APP_DATABASE_HOST"] = "env-host"
+        os.environ["APP_DATABASE_PORT"] = "9999"
+        os.environ["APP_REDIS_DB"] = "5"
 
         try:
             from src.core.config.loader import Config
@@ -285,13 +280,13 @@ class TestEnvironmentVariableOverrides:
             config = manager.load()
 
             # Verify nested overrides
-            assert config.database.host == 'env-host'
+            assert config.database.host == "env-host"
             assert config.database.port == 9999  # Type conversion
             assert config.redis.db == 5
         finally:
-            del os.environ['APP_DATABASE_HOST']
-            del os.environ['APP_DATABASE_PORT']
-            del os.environ['APP_REDIS_DB']
+            del os.environ["APP_DATABASE_HOST"]
+            del os.environ["APP_DATABASE_PORT"]
+            del os.environ["APP_REDIS_DB"]
 
     def test_environment_variable_override_with_type_conversion(self, valid_yaml_file):
         """
@@ -299,8 +294,8 @@ class TestEnvironmentVariableOverrides:
         WHEN overriding numeric or boolean config values
         THEN automatic type conversion occurs
         """
-        os.environ['APP_DATABASE_PORT'] = '9999'
-        os.environ['APP_PLUGINS_AUTO_LOAD'] = 'false'
+        os.environ["APP_DATABASE_PORT"] = "9999"
+        os.environ["APP_PLUGINS_AUTO_LOAD"] = "false"
 
         try:
             from src.core.config.loader import Config
@@ -314,8 +309,8 @@ class TestEnvironmentVariableOverrides:
             assert isinstance(config.plugins.auto_load, bool)
             assert config.plugins.auto_load is False
         finally:
-            del os.environ['APP_DATABASE_PORT']
-            del os.environ['APP_PLUGINS_AUTO_LOAD']
+            del os.environ["APP_DATABASE_PORT"]
+            del os.environ["APP_PLUGINS_AUTO_LOAD"]
 
     def test_environment_variable_override_list_values(self, valid_yaml_file):
         """
@@ -323,7 +318,7 @@ class TestEnvironmentVariableOverrides:
         WHEN environment variable overrides with comma-separated values
         THEN list is correctly parsed
         """
-        os.environ['APP_PLUGINS_PATHS'] = '/path1,/path2,/path3'
+        os.environ["APP_PLUGINS_PATHS"] = "/path1,/path2,/path3"
 
         try:
             from src.core.config.loader import Config
@@ -334,9 +329,9 @@ class TestEnvironmentVariableOverrides:
             # Verify list parsing
             assert isinstance(config.plugins.paths, list)
             assert len(config.plugins.paths) == 3
-            assert '/path1' in config.plugins.paths
+            assert "/path1" in config.plugins.paths
         finally:
-            del os.environ['APP_PLUGINS_PATHS']
+            del os.environ["APP_PLUGINS_PATHS"]
 
     def test_environment_variable_override_non_existent_key(self, valid_yaml_file):
         """
@@ -344,7 +339,7 @@ class TestEnvironmentVariableOverrides:
         WHEN config is loaded
         THEN new key is added to configuration
         """
-        os.environ['APP_NEW_SETTING'] = 'new-value'
+        os.environ["APP_NEW_SETTING"] = "new-value"
 
         try:
             from src.core.config.loader import Config
@@ -353,10 +348,10 @@ class TestEnvironmentVariableOverrides:
             config = manager.load()
 
             # Verify new key added
-            assert hasattr(config, 'new_setting')
-            assert config.new_setting == 'new-value'
+            assert hasattr(config, "new_setting")
+            assert config.new_setting == "new-value"
         finally:
-            del os.environ['APP_NEW_SETTING']
+            del os.environ["APP_NEW_SETTING"]
 
     def test_environment_variable_prefix_configurable(self, valid_yaml_file):
         """
@@ -364,22 +359,23 @@ class TestEnvironmentVariableOverrides:
         WHEN config manager is initialized with custom prefix
         THEN environment variables with custom prefix are recognized
         """
-        os.environ['CUSTOM_DATABASE_HOST'] = 'custom-host'
+        os.environ["CUSTOM_DATABASE_HOST"] = "custom-host"
 
         try:
             from src.core.config.loader import Config
 
-            manager = Config(valid_yaml_file, env_prefix='CUSTOM_')
+            manager = Config(valid_yaml_file, env_prefix="CUSTOM_")
             config = manager.load()
 
-            assert config.database.host == 'custom-host'
+            assert config.database.host == "custom-host"
         finally:
-            del os.environ['CUSTOM_DATABASE_HOST']
+            del os.environ["CUSTOM_DATABASE_HOST"]
 
 
 # ============================================================================
 # TEST CLASS 3: Schema Validation (Acceptance Criteria #3)
 # ============================================================================
+
 
 class TestConfigurationSchemaValidation:
     """
@@ -395,17 +391,16 @@ class TestConfigurationSchemaValidation:
         THEN validation succeeds
         """
         from src.core.config.loader import Config
-        from src.core.config.schema import DatabaseConfig, RedisConfig, LoggingConfig, PluginsConfig
 
         manager = Config(valid_yaml_file)
         config = manager.load()
 
         # Verify schema validation
         assert isinstance(config, object)
-        assert hasattr(config, 'database')
-        assert hasattr(config, 'redis')
-        assert hasattr(config, 'logging')
-        assert hasattr(config, 'plugins')
+        assert hasattr(config, "database")
+        assert hasattr(config, "redis")
+        assert hasattr(config, "logging")
+        assert hasattr(config, "plugins")
 
     def test_config_validation_fails_on_invalid_type(self, tmp_path):
         """
@@ -417,13 +412,16 @@ class TestConfigurationSchemaValidation:
 
         # Create config with invalid type
         config_file = tmp_path / "invalid_type.yaml"
-        with open(config_file, 'w') as f:
-            yaml.dump({
-                "database": {
-                    "host": "localhost",
-                    "port": "not-a-number"  # Should be int
-                }
-            }, f)
+        with open(config_file, "w") as f:
+            yaml.dump(
+                {
+                    "database": {
+                        "host": "localhost",
+                        "port": "not-a-number",  # Should be int
+                    }
+                },
+                f,
+            )
 
         manager = Config(config_file)
 
@@ -440,13 +438,16 @@ class TestConfigurationSchemaValidation:
 
         # Create config missing required field
         config_file = tmp_path / "missing_field.yaml"
-        with open(config_file, 'w') as f:
-            yaml.dump({
-                "database": {
-                    "host": "localhost"
-                    # Missing: port, name, user, password
-                }
-            }, f)
+        with open(config_file, "w") as f:
+            yaml.dump(
+                {
+                    "database": {
+                        "host": "localhost"
+                        # Missing: port, name, user, password
+                    }
+                },
+                f,
+            )
 
         manager = Config(config_file)
 
@@ -463,13 +464,16 @@ class TestConfigurationSchemaValidation:
 
         # Create config with invalid port
         config_file = tmp_path / "invalid_port.yaml"
-        with open(config_file, 'w') as f:
-            yaml.dump({
-                "database": {
-                    "host": "localhost",
-                    "port": 99999  # Invalid port (> 65535)
-                }
-            }, f)
+        with open(config_file, "w") as f:
+            yaml.dump(
+                {
+                    "database": {
+                        "host": "localhost",
+                        "port": 99999,  # Invalid port (> 65535)
+                    }
+                },
+                f,
+            )
 
         manager = Config(config_file)
 
@@ -486,16 +490,21 @@ class TestConfigurationSchemaValidation:
 
         # Create config with invalid log level
         config_file = tmp_path / "invalid_log_level.yaml"
-        with open(config_file, 'w') as f:
-            yaml.dump({
-                "logging": {
-                    "level": "INVALID_LEVEL"  # Not in DEBUG, INFO, WARNING, ERROR
-                }
-            }, f)
+        with open(config_file, "w") as f:
+            yaml.dump(
+                {
+                    "logging": {
+                        "level": "INVALID_LEVEL"  # Not in DEBUG, INFO, WARNING, ERROR
+                    }
+                },
+                f,
+            )
 
         manager = Config(config_file)
 
-        with pytest.raises(ValueError, match="level.*must be one of.*DEBUG.*INFO.*WARNING.*ERROR"):
+        with pytest.raises(
+            ValueError, match="level.*must be one of.*DEBUG.*INFO.*WARNING.*ERROR"
+        ):
             manager.load()
 
     def test_config_validation_error_messages_are_clear(self, tmp_path):
@@ -508,14 +517,17 @@ class TestConfigurationSchemaValidation:
 
         # Create config with multiple errors
         config_file = tmp_path / "multiple_errors.yaml"
-        with open(config_file, 'w') as f:
-            yaml.dump({
-                "database": {
-                    "host": "localhost",
-                    "port": "invalid",
-                    "name": ""  # Empty string not allowed
-                }
-            }, f)
+        with open(config_file, "w") as f:
+            yaml.dump(
+                {
+                    "database": {
+                        "host": "localhost",
+                        "port": "invalid",
+                        "name": "",  # Empty string not allowed
+                    }
+                },
+                f,
+            )
 
         manager = Config(config_file)
 
@@ -547,6 +559,7 @@ class TestConfigurationSchemaValidation:
 # TEST CLASS 4: Configuration Hot-Reload (Acceptance Criteria #4)
 # ============================================================================
 
+
 class TestConfigurationHotReload:
     """
     GIVEN a configuration is loaded
@@ -572,19 +585,22 @@ class TestConfigurationHotReload:
         assert config.database.host == "localhost"
 
         # Modify file
-        import time
+
         time.sleep(0.1)  # Ensure different timestamp
 
-        with open(valid_yaml_file, 'w') as f:
-            yaml.dump({
-                "database": {
-                    "host": "modified-host",
-                    "port": 5432,
-                    "name": "testdb",
-                    "user": "testuser",
-                    "password": "testpass"
-                }
-            }, f)
+        with open(valid_yaml_file, "w") as f:
+            yaml.dump(
+                {
+                    "database": {
+                        "host": "modified-host",
+                        "port": 5432,
+                        "name": "testdb",
+                        "user": "testuser",
+                        "password": "testpass",
+                    }
+                },
+                f,
+            )
 
         # Wait for reload
         time.sleep(0.5)
@@ -607,17 +623,20 @@ class TestConfigurationHotReload:
         initial_host = config.database.host
 
         # Modify file
-        import time
-        with open(valid_yaml_file, 'w') as f:
-            yaml.dump({
-                "database": {
-                    "host": "modified-host",
-                    "port": 5432,
-                    "name": "testdb",
-                    "user": "testuser",
-                    "password": "testpass"
-                }
-            }, f)
+
+        with open(valid_yaml_file, "w") as f:
+            yaml.dump(
+                {
+                    "database": {
+                        "host": "modified-host",
+                        "port": 5432,
+                        "name": "testdb",
+                        "user": "testuser",
+                        "password": "testpass",
+                    }
+                },
+                f,
+            )
 
         time.sleep(0.5)
 
@@ -642,17 +661,20 @@ class TestConfigurationHotReload:
         config = manager.load()
 
         # Modify file
-        import time
-        with open(valid_yaml_file, 'w') as f:
-            yaml.dump({
-                "database": {
-                    "host": "callback-host",
-                    "port": 5432,
-                    "name": "testdb",
-                    "user": "testuser",
-                    "password": "testpass"
-                }
-            }, f)
+
+        with open(valid_yaml_file, "w") as f:
+            yaml.dump(
+                {
+                    "database": {
+                        "host": "callback-host",
+                        "port": 5432,
+                        "name": "testdb",
+                        "user": "testuser",
+                        "password": "testpass",
+                    }
+                },
+                f,
+            )
 
         time.sleep(0.5)
 
@@ -674,8 +696,8 @@ class TestConfigurationHotReload:
         initial_host = config.database.host
 
         # Corrupt file
-        import time
-        with open(valid_yaml_file, 'w') as f:
+
+        with open(valid_yaml_file, "w") as f:
             f.write("invalid: yaml: content:")
 
         time.sleep(0.5)
@@ -696,16 +718,19 @@ class TestConfigurationHotReload:
         config = manager.load()
 
         # Modify file
-        with open(valid_yaml_file, 'w') as f:
-            yaml.dump({
-                "database": {
-                    "host": "manual-reload-host",
-                    "port": 5432,
-                    "name": "testdb",
-                    "user": "testuser",
-                    "password": "testpass"
-                }
-            }, f)
+        with open(valid_yaml_file, "w") as f:
+            yaml.dump(
+                {
+                    "database": {
+                        "host": "manual-reload-host",
+                        "port": 5432,
+                        "name": "testdb",
+                        "user": "testuser",
+                        "password": "testpass",
+                    }
+                },
+                f,
+            )
 
         # Manual reload
         manager.reload()
@@ -717,6 +742,7 @@ class TestConfigurationHotReload:
 # ============================================================================
 # TEST CLASS 5: Configuration Access and Query
 # ============================================================================
+
 
 class TestConfigurationAccess:
     """
@@ -752,8 +778,8 @@ class TestConfigurationAccess:
         config = manager.load()
 
         # Dict notation access
-        assert config['database']['host'] == "localhost"
-        assert config['database']['port'] == 5432
+        assert config["database"]["host"] == "localhost"
+        assert config["database"]["port"] == 5432
 
     def test_config_get_method_with_default(self, valid_yaml_file):
         """
@@ -767,8 +793,8 @@ class TestConfigurationAccess:
         config = manager.load()
 
         # Get with default
-        assert config.get('nonexistent_key', 'default_value') == 'default_value'
-        assert config.get('database.nonexistent', 'default') == 'default'
+        assert config.get("nonexistent_key", "default_value") == "default_value"
+        assert config.get("database.nonexistent", "default") == "default"
 
     def test_config_get_value_by_path(self, valid_yaml_file):
         """
@@ -782,8 +808,8 @@ class TestConfigurationAccess:
         config = manager.load()
 
         # Path-based access
-        assert config.get_path('database.host') == "localhost"
-        assert config.get_path('redis.port') == 6379
+        assert config.get_path("database.host") == "localhost"
+        assert config.get_path("redis.port") == 6379
 
     def test_config_export_to_dict(self, valid_yaml_file):
         """
@@ -800,8 +826,8 @@ class TestConfigurationAccess:
         config_dict = config.to_dict()
 
         assert isinstance(config_dict, dict)
-        assert 'database' in config_dict
-        assert config_dict['database']['host'] == "localhost"
+        assert "database" in config_dict
+        assert config_dict["database"]["host"] == "localhost"
 
     def test_config_export_to_yaml(self, valid_yaml_file, tmp_path):
         """
@@ -821,15 +847,16 @@ class TestConfigurationAccess:
         # Verify export
         assert export_file.exists()
 
-        with open(export_file, 'r') as f:
+        with open(export_file, "r") as f:
             exported_data = yaml.safe_load(f)
 
-        assert exported_data['database']['host'] == "localhost"
+        assert exported_data["database"]["host"] == "localhost"
 
 
 # ============================================================================
 # TEST CLASS 6: Concurrent Access
 # ============================================================================
+
 
 class TestConfigurationConcurrentAccess:
     """
@@ -904,6 +931,7 @@ class TestConfigurationConcurrentAccess:
 # EDGE CASE TESTS
 # ============================================================================
 
+
 class TestConfigurationEdgeCases:
     """
     GIVEN various edge case scenarios
@@ -936,7 +964,7 @@ class TestConfigurationEdgeCases:
         from src.core.config.loader import Config
 
         config_file = tmp_path / "with_comments.yaml"
-        with open(config_file, 'w') as f:
+        with open(config_file, "w") as f:
             f.write("""
 # Database configuration
 database:
@@ -959,12 +987,8 @@ database:
         from src.core.config.loader import Config
 
         config_file = tmp_path / "special_chars.yaml"
-        with open(config_file, 'w') as f:
-            yaml.dump({
-                "database": {
-                    "password": "p@ssw0rd!#$%"
-                }
-            }, f)
+        with open(config_file, "w") as f:
+            yaml.dump({"database": {"password": "p@ssw0rd!#$%"}}, f)
 
         manager = Config(config_file)
         config = manager.load()

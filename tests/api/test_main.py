@@ -11,11 +11,8 @@ Acceptance Criteria:
 - OpenAPI documentation auto-generated
 """
 
-import pytest
 from fastapi.testclient import TestClient
-from fastapi import FastAPI, Request
-from unittest.mock import Mock, patch, MagicMock
-import asyncio
+from fastapi import FastAPI
 
 
 # ========================================================================
@@ -97,7 +94,7 @@ class TestMiddlewareStack:
         # Check if CORS middleware is in the middleware stack
         # Starlette wraps middleware in Middleware objects, access cls for the actual class
         middleware_types = [m.cls.__name__ for m in app.user_middleware]
-        assert any('CORSMiddleware' in m for m in middleware_types)
+        assert any("CORSMiddleware" in m for m in middleware_types)
 
     def test_middleware_order_correct(self):
         """
@@ -128,11 +125,10 @@ class TestMiddlewareStack:
         Current: Module does not exist (should fail)
         """
         from src.api.main import app
-        from src.api.middleware import RequestIDMiddleware
 
         # Check if RequestIDMiddleware is in the stack
         middleware_types = [m.cls.__name__ for m in app.user_middleware]
-        assert 'RequestIDMiddleware' in middleware_types
+        assert "RequestIDMiddleware" in middleware_types
 
     def test_logging_middleware_exists(self):
         """
@@ -142,11 +138,10 @@ class TestMiddlewareStack:
         Current: Module does not exist (should fail)
         """
         from src.api.main import app
-        from src.api.middleware import LoggingMiddleware
 
         # Check if LoggingMiddleware is in the stack
         middleware_types = [m.cls.__name__ for m in app.user_middleware]
-        assert 'LoggingMiddleware' in middleware_types
+        assert "LoggingMiddleware" in middleware_types
 
     def test_error_handler_middleware_exists(self):
         """
@@ -156,11 +151,10 @@ class TestMiddlewareStack:
         Current: Module does not exist (should fail)
         """
         from src.api.main import app
-        from src.api.middleware import ErrorHandlerMiddleware
 
         # Check if ErrorHandlerMiddleware is in the stack
         middleware_types = [m.cls.__name__ for m in app.user_middleware]
-        assert 'ErrorHandlerMiddleware' in middleware_types
+        assert "ErrorHandlerMiddleware" in middleware_types
 
 
 # ========================================================================
@@ -227,7 +221,6 @@ class TestDependencyInjection:
         Current: Module does not exist (should fail)
         """
         from src.api.dependencies import get_config
-        from src.core.config.loader import Config
 
         config = get_config()
         # Config might be a dict or object depending on implementation
@@ -388,14 +381,13 @@ class TestPhase1Integration:
         Current: get_processor is a generator, use next() to get instance
         """
         from src.api.dependencies import get_processor
-        from src.core.processor import Processor
 
         processor_gen = get_processor()
         processor = next(processor_gen)
 
         # Should have expected Processor attributes
-        assert hasattr(processor, 'connection')
-        assert hasattr(processor, 'load_csv')
+        assert hasattr(processor, "connection")
+        assert hasattr(processor, "load_csv")
 
     def test_config_integration_via_dependency(self):
         """

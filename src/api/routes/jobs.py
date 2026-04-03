@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/v1/jobs", tags=["Jobs"])
 async def submit_job(
     job_data: JobSubmit,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Submit a job for workflow execution.
@@ -37,8 +37,7 @@ async def submit_job(
     job = await service.submit_job(job_data, owner_id)
     if not job:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workflow not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
         )
 
     return job
@@ -51,7 +50,7 @@ async def list_jobs(
     current_user: dict = Depends(get_current_user),
     status: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100)
+    page_size: int = Query(20, ge=1, le=100),
 ):
     """
     List jobs with pagination.
@@ -64,17 +63,14 @@ async def list_jobs(
     owner_id = int(current_user["sub"])
 
     jobs, total = await service.list_jobs(
-        owner_id,
-        status=status,
-        page=page,
-        page_size=page_size
+        owner_id, status=status, page=page, page_size=page_size
     )
 
     return JobListResponse(
         jobs=jobs,  # type: ignore[arg-type]
         total=total,
         page=page,
-        page_size=page_size
+        page_size=page_size,
     )
 
 
@@ -83,7 +79,7 @@ async def list_jobs(
 async def get_job(
     job_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Get job status by ID.
@@ -98,8 +94,7 @@ async def get_job(
     job = await service.get_job(job_id, owner_id)
     if not job:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
 
     return job
@@ -110,7 +105,7 @@ async def get_job(
 async def cancel_job(
     job_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Cancel a running job.
@@ -126,7 +121,7 @@ async def cancel_job(
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found or cannot be cancelled"
+            detail="Job not found or cannot be cancelled",
         )
 
     # Return updated job

@@ -47,7 +47,10 @@ def get_rbac_manager() -> RBACManager:
                     ],
                     "inherits_from": ["viewer"],
                 },
-                "viewer": {"permissions": ["data:read", "jobs:read"], "inherits_from": []},
+                "viewer": {
+                    "permissions": ["data:read", "jobs:read"],
+                    "inherits_from": [],
+                },
             },
         }
         _rbac_manager = RBACManager(config=config)
@@ -119,7 +122,9 @@ async def authorize_endpoint(
         )
 
     # Log successful authorization
-    logger.debug(f"Authorization granted for user {user.get('id')}: {required_permission}")
+    logger.debug(
+        f"Authorization granted for user {user.get('id')}: {required_permission}"
+    )
 
 
 async def get_current_user(

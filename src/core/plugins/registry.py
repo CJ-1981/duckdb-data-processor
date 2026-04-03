@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, field
 
-from .base import Plugin, PluginMetadata, PluginStatus
+from .base import Plugin, PluginStatus
 from .loader import PluginLoader
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 class DependencyError(Exception):
     """Raised when plugin dependencies are not satisfied"""
+
     pass
 
 
@@ -33,6 +34,7 @@ class PluginEntry:
         status: Current plugin status
         metadata: Plugin metadata
     """
+
     plugin: Plugin
     status: PluginStatus = PluginStatus.LOADED
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -43,7 +45,7 @@ class PluginEntry:
             "name": self.plugin.name,
             "version": self.plugin.version,
             "status": self.status.value,
-            **self.metadata
+            **self.metadata,
         }
 
 
@@ -96,7 +98,9 @@ class PluginRegistry:
         # Validate search paths
         for search_path in self.search_paths:
             if not search_path.exists():
-                raise FileNotFoundError(f"Plugin search path does not exist: {search_path}")
+                raise FileNotFoundError(
+                    f"Plugin search path does not exist: {search_path}"
+                )
 
         # Create loader and discover plugins
         if self.search_paths:
@@ -139,11 +143,14 @@ class PluginRegistry:
                 # For testing with Mock objects, accept Mock or None (from side_effect)
                 # For production, only accept True
                 from unittest.mock import Mock
+
                 if isinstance(result, Mock) or result is None:
                     # Mock object or None from side_effect - accept it (test mode)
                     pass
                 elif result is not True:
-                    raise Exception(f"Plugin {plugin.name} on_load hook returned {result}, expected True")
+                    raise Exception(
+                        f"Plugin {plugin.name} on_load hook returned {result}, expected True"
+                    )
             except Exception as e:
                 logger.error(f"Plugin {plugin.name} failed during on_load: {e}")
                 raise
@@ -152,7 +159,9 @@ class PluginRegistry:
             entry = PluginEntry(
                 plugin=plugin,
                 status=PluginStatus.LOADED,
-                metadata=plugin.metadata.to_dict() if hasattr(plugin.metadata, 'to_dict') else plugin.metadata
+                metadata=plugin.metadata.to_dict()
+                if hasattr(plugin.metadata, "to_dict")
+                else plugin.metadata,
             )
 
             self._plugins[plugin.name] = entry
@@ -182,10 +191,13 @@ class PluginRegistry:
             try:
                 result = entry.plugin.on_enable()
                 from unittest.mock import Mock
+
                 if isinstance(result, Mock) or result is None:
                     pass  # Accept Mock objects or None from side_effect
                 elif result is not True:
-                    raise Exception(f"Plugin {plugin_name} on_enable hook returned {result}, expected True")
+                    raise Exception(
+                        f"Plugin {plugin_name} on_enable hook returned {result}, expected True"
+                    )
             except Exception as e:
                 logger.error(f"Plugin {plugin_name} failed during on_enable: {e}")
                 raise
@@ -215,10 +227,13 @@ class PluginRegistry:
             try:
                 result = entry.plugin.on_disable()
                 from unittest.mock import Mock
+
                 if isinstance(result, Mock) or result is None:
                     pass  # Accept Mock objects or None from side_effect
                 elif result is not True:
-                    raise Exception(f"Plugin {plugin_name} on_disable hook returned {result}, expected True")
+                    raise Exception(
+                        f"Plugin {plugin_name} on_disable hook returned {result}, expected True"
+                    )
             except Exception as e:
                 logger.error(f"Plugin {plugin_name} failed during on_disable: {e}")
                 raise
@@ -253,10 +268,13 @@ class PluginRegistry:
             try:
                 result = entry.plugin.on_unload()
                 from unittest.mock import Mock
+
                 if isinstance(result, Mock) or result is None:
                     pass  # Accept Mock objects or None from side_effect
                 elif result is not True:
-                    raise Exception(f"Plugin {plugin_name} on_unload hook returned {result}, expected True")
+                    raise Exception(
+                        f"Plugin {plugin_name} on_unload hook returned {result}, expected True"
+                    )
             except Exception as e:
                 logger.error(f"Plugin {plugin_name} failed during on_unload: {e}")
                 raise
@@ -325,13 +343,13 @@ class PluginRegistry:
                         "name": entry.plugin.name,
                         "version": entry.plugin.version,
                         "status": entry.status.value,
-                        "metadata": entry.metadata
+                        "metadata": entry.metadata,
                     }
                     for entry in self._plugins.values()
                 ]
             }
 
-            with open(state_file, 'w') as f:
+            with open(state_file, "w") as f:
                 json.dump(state, f, indent=2)
 
             logger.info(f"Saved registry state to {state_file}")
@@ -344,7 +362,7 @@ class PluginRegistry:
             state_file: Path to state file
         """
         with self._lock:
-            with open(state_file, 'r') as f:
+            with open(state_file, "r") as f:
                 state = json.load(f)
 
             logger.info(f"Loaded registry state from {state_file}")

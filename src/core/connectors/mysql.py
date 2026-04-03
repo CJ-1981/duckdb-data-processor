@@ -9,10 +9,12 @@ from contextlib import contextmanager
 
 try:
     import pymysql
+
     PYMYSQL_AVAILABLE = True
 except ImportError:
     try:
         import mysql.connector as pymysql
+
         MYSQL_CONNECTOR_AVAILABLE = True
         PYMYSQL_AVAILABLE = True
     except ImportError:
@@ -44,10 +46,10 @@ class MySQLConnector(DatabaseConnector):
         user: Optional[str] = None,
         password: Optional[str] = None,
         ssl_mode: Optional[str] = None,
-        charset: str = 'utf8mb4',
+        charset: str = "utf8mb4",
         connection_timeout: float = 30.0,
         connection_pool=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize MySQL connector.
@@ -68,7 +70,7 @@ class MySQLConnector(DatabaseConnector):
         super().__init__(connection_string, **kwargs)
 
         # Allow mocking for tests
-        if not PYMYSQL_AVAILABLE and not kwargs.get('_allow_mock', False):
+        if not PYMYSQL_AVAILABLE and not kwargs.get("_allow_mock", False):
             raise ImportError(
                 "pymysql or mysql-connector-python is required for MySQL connector. "
                 "Install with: pip install pymysql"
@@ -89,7 +91,7 @@ class MySQLConnector(DatabaseConnector):
             self.connection_string = self._build_connection_string()
 
     @classmethod
-    def from_config(cls, config) -> 'MySQLConnector':
+    def from_config(cls, config) -> "MySQLConnector":
         """
         Create connector from configuration object.
 
@@ -128,28 +130,28 @@ class MySQLConnector(DatabaseConnector):
             if self.connection_string:
                 conn_params = self.parse_connection_string(self.connection_string)
                 kwargs_conn = {
-                    'host': conn_params['host'],
-                    'port': conn_params['port'],
-                    'database': conn_params['database'],
-                    'user': conn_params['user'],
-                    'password': conn_params['password'],
-                    'charset': self._charset,
-                    'connect_timeout': self._connection_timeout,
+                    "host": conn_params["host"],
+                    "port": conn_params["port"],
+                    "database": conn_params["database"],
+                    "user": conn_params["user"],
+                    "password": conn_params["password"],
+                    "charset": self._charset,
+                    "connect_timeout": self._connection_timeout,
                 }
 
                 # Add SSL mode from params
-                if 'ssl-mode' in conn_params['params']:
-                    kwargs_conn['ssl_mode'] = conn_params['params']['ssl-mode'][0]
+                if "ssl-mode" in conn_params["params"]:
+                    kwargs_conn["ssl_mode"] = conn_params["params"]["ssl-mode"][0]
             else:
                 kwargs_conn = {
-                    'host': self._host,
-                    'port': self._port,
-                    'database': self._database,
-                    'user': self._user,
-                    'password': self._password,
-                    'charset': self._charset,
-                    'ssl_mode': self._ssl_mode,
-                    'connect_timeout': self._connection_timeout,
+                    "host": self._host,
+                    "port": self._port,
+                    "database": self._database,
+                    "user": self._user,
+                    "password": self._password,
+                    "charset": self._charset,
+                    "ssl_mode": self._ssl_mode,
+                    "connect_timeout": self._connection_timeout,
                 }
 
             # Remove None values
@@ -195,7 +197,7 @@ class MySQLConnector(DatabaseConnector):
             cursor.execute(query, params)
 
             # Return results for SELECT
-            if query.strip().upper().startswith('SELECT'):
+            if query.strip().upper().startswith("SELECT"):
                 return cursor.fetchall()
             # Return row count for INSERT/UPDATE/DELETE
             else:
@@ -207,7 +209,7 @@ class MySQLConnector(DatabaseConnector):
         file_path: str,
         fields_terminated_by: str = ",",
         lines_terminated_by: str = "\\n",
-        ignore_lines: int = 0
+        ignore_lines: int = 0,
     ) -> None:
         """
         Use LOAD DATA INFILE for bulk data import.
@@ -238,7 +240,9 @@ class MySQLConnector(DatabaseConnector):
 
         self._connection.commit()
 
-    def execute_select(self, query: str, params: Optional[List[Any]] = None) -> List[Tuple]:
+    def execute_select(
+        self, query: str, params: Optional[List[Any]] = None
+    ) -> List[Tuple]:
         """
         Execute SELECT query with MySQL-specific optimizations.
 

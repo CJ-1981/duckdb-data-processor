@@ -60,13 +60,13 @@ class UserService:
             raise ValueError("Username already taken")
 
         # Hash password
-        hashed_password = hash_password(user_data.password)
+        password_hash = hash_password(user_data.password)
 
         # Create user
         user = User(
             username=user_data.username,
             email=user_data.email,
-            hashed_password=hashed_password
+            password_hash=password_hash,
         )
 
         self.db.add(user)
@@ -85,9 +85,7 @@ class UserService:
         Returns:
             User object or None if not found
         """
-        result = await self.db.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
 
     async def get_user_by_email(self, email: str) -> Optional[User]:
@@ -102,9 +100,7 @@ class UserService:
 
         @MX:ANCHOR: Email lookup entry point (fan_in >= 3: auth, registration, password reset)
         """
-        result = await self.db.execute(
-            select(User).where(User.email == email)
-        )
+        result = await self.db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
 
     async def get_user_by_username(self, username: str) -> Optional[User]:
@@ -117,9 +113,7 @@ class UserService:
         Returns:
             User object or None if not found
         """
-        result = await self.db.execute(
-            select(User).where(User.username == username)
-        )
+        result = await self.db.execute(select(User).where(User.username == username))
         return result.scalar_one_or_none()
 
     async def update_user(self, user_id: int, user_data: UserUpdate) -> Optional[User]:
@@ -142,10 +136,7 @@ class UserService:
             # Check if email already exists for another user
             existing = await self.db.execute(
                 select(User).where(
-                    and_(
-                        User.email == user_data.email,
-                        User.id != user_id
-                    )
+                    and_(User.email == user_data.email, User.id != user_id)
                 )
             )
             if existing.scalar_one_or_none():
@@ -157,10 +148,7 @@ class UserService:
             # Check if username already exists for another user
             existing = await self.db.execute(
                 select(User).where(
-                    and_(
-                        User.username == user_data.username,
-                        User.id != user_id
-                    )
+                    and_(User.username == user_data.username, User.id != user_id)
                 )
             )
             if existing.scalar_one_or_none():
@@ -176,16 +164,13 @@ class UserService:
         return user
 
     async def change_password(
-        self,
-        user: User,
-        current_password: str,
-        new_password: str
+        self, user_id: int, current_password: str, new_password: str
     ) -> bool:
         """
         Change user password.
 
         Args:
-            user: User object
+            user_id: ID of user to update
             current_password: Current password for verification
             new_password: New password to set
 
@@ -194,12 +179,17 @@ class UserService:
 
         @MX:ANCHOR: Password change entry point (fan_in >= 3: profile update, reset, forced change)
         """
+        # Get user
+        user = await self.get_user(user_id)
+        if not user:
+            raise ValueError("User not found")
+
         # Verify current password
-        if not verify_password(current_password, user.hashed_password):
+        if not verify_password(current_password, user.password_hash):
             raise ValueError("Incorrect password")
 
         # Hash new password
-        user.hashed_password = hash_password(new_password)
+        user.password_hash = hash_password(new_password)
         user.updated_at = datetime.utcnow()
 
         await self.db.commit()
@@ -207,10 +197,7 @@ class UserService:
         return True
 
     async def list_users(
-        self,
-        page: int = 1,
-        page_size: int = 20,
-        search: Optional[str] = None
+        self, page: int = 1, page_size: int = 20, search: Optional[str] = None
     ) -> Tuple[List[User], int]:
         """
         List users with pagination.
@@ -228,8 +215,7 @@ class UserService:
         # Apply search filter
         if search:
             query = query.where(
-                (User.username.ilike(f"%{search}%")) |
-                (User.email.ilike(f"%{search}%"))
+                (User.username.ilike(f"%{search}%")) | (User.email.ilike(f"%{search}%"))
             )
 
         # Get total count
@@ -270,6 +256,7 @@ class UserService:
 
 # Password utility functions
 
+
 def hash_password(password: str) -> str:
     """
     Hash a password using bcrypt.
@@ -301,8 +288,4 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-__all__ = [
-    'UserService',
-    'hash_password',
-    'verify_password'
-]
+__all__ = ["UserService", "hash_password", "verify_password"]

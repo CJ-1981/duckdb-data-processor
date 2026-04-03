@@ -2,6 +2,12 @@
 duckdb>=1.0.0
 pydantic>=2.0.0
 pyyaml>=6.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.12.0
 
 # FastAPI and web framework
 fastapi>=0.115.0
@@ -11,7 +17,7 @@ python-multipart>=0.0.9
 # Authentication
 PyJWT>=2.8.0
 passlib[bcrypt]>=1.7.1
-python-jose[cryptography]>=4.0.1
+python-jose[cryptography]>=3.3.0
 
 # Task queue
 celery[redis]>=5.3.0
@@ -31,3 +37,4 @@ mypy>=1.10.0
 
 # Optional
 watchdog>=4.0.0  # For config hot-reload
+psutil>=7.0.0    # For system monitoring (streaming progress)

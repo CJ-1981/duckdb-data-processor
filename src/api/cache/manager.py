@@ -10,7 +10,6 @@ Provides basic get/set/delete operations with TTL support.
 import json
 import hashlib
 from typing import Any, Optional
-from datetime import datetime
 
 
 class CacheManager:
@@ -156,4 +155,4 @@ class CacheManager:
         return hashlib.sha256(data.encode()).hexdigest()
 
 
-__all__ = ['CacheManager']
+__all__ = ["CacheManager"]

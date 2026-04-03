@@ -10,7 +10,7 @@ from typing import Dict, List, Set, Optional, Any
 from collections import defaultdict
 import logging
 
-from src.api.auth.models import Role, RoleConfig, RBACConfig
+from src.api.auth.models import Role
 
 logger = logging.getLogger(__name__)
 
@@ -43,16 +43,16 @@ class RBACManager:
         # Initialize roles from config
         roles_config = config.get("roles", {})
         for role_name, role_data in roles_config.items():
-                role = Role(
-                    name=role_name,
-                    permissions=role_data.get("permissions", []),
-                    inherits_from=role_data.get("inherits_from", []),
-                )
-                self.roles[role_name] = role
+            role = Role(
+                name=role_name,
+                permissions=role_data.get("permissions", []),
+                inherits_from=role_data.get("inherits_from", []),
+            )
+            self.roles[role_name] = role
 
-                # Build inheritance graph
-                if role.inherits_from:
-                    self.role_inheritance[role_name] = role.inherits_from
+            # Build inheritance graph
+            if role.inherits_from:
+                self.role_inheritance[role_name] = role.inherits_from
 
         # Build permission cache for performance
         self._permission_cache: Dict[str, Set[str]] = {}

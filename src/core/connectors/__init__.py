@@ -8,8 +8,8 @@ from .base import BaseConnector
 from .csv import CSVConnector
 
 __all__ = [
-    'BaseConnector',
-    'CSVConnector',
+    "BaseConnector",
+    "CSVConnector",
 ]
 
 # @MX:ANCHOR: Connector registry entry point (fan_in >= 3: dynamic loading, factory functions, tests)
@@ -19,7 +19,7 @@ __all__ = [
 
 # Connector registry
 CONNECTOR_REGISTRY: dict[str, type[BaseConnector]] = {
-    'csv': CSVConnector,
+    "csv": CSVConnector,
 }
 
 
@@ -39,8 +39,10 @@ def get_connector(connector_type: str) -> type[BaseConnector]:
         KeyError: If connector type not found
     """
     if connector_type not in CONNECTOR_REGISTRY:
-        raise KeyError(f"Unknown connector type: {connector_type}. "
-                      f"Available types: {list(CONNECTOR_REGISTRY.keys())}")
+        raise KeyError(
+            f"Unknown connector type: {connector_type}. "
+            f"Available types: {list(CONNECTOR_REGISTRY.keys())}"
+        )
 
     return CONNECTOR_REGISTRY[connector_type]
 

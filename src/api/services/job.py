@@ -4,7 +4,7 @@ Job Service
 Business logic for job operations.
 """
 
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Tuple
 from datetime import datetime
 from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,11 +28,7 @@ class JobService:
         """
         self.db = db
 
-    async def submit_job(
-        self,
-        job_data: JobSubmit,
-        owner_id: int
-    ) -> Optional[Job]:
+    async def submit_job(self, job_data: JobSubmit, owner_id: int) -> Optional[Job]:
         """
         Submit a new job for workflow execution.
 
@@ -57,7 +53,7 @@ class JobService:
                 and_(
                     Workflow.id == job_data.workflow_id,
                     Workflow.owner_id == owner_id,
-                    Workflow.deleted_at.is_(None)
+                    Workflow.deleted_at.is_(None),
                 )
             )
         )
@@ -72,7 +68,7 @@ class JobService:
             workflow_id=workflow.id,  # Store the integer workflow ID
             status=JobStatus.pending,
             progress=0.0,
-            created_by=owner_id
+            created_by=owner_id,
         )
 
         self.db.add(job)
@@ -84,11 +80,7 @@ class JobService:
 
         return job
 
-    async def get_job(
-        self,
-        job_id: str,
-        owner_id: int
-    ) -> Optional[Job]:
+    async def get_job(self, job_id: str, owner_id: int) -> Optional[Job]:
         """
         Get job by ID (with ownership check).
 
@@ -100,12 +92,7 @@ class JobService:
             Job object or None if not found
         """
         result = await self.db.execute(
-            select(Job).where(
-                and_(
-                    Job.id == job_id,
-                    Job.created_by == owner_id
-                )
-            )
+            select(Job).where(and_(Job.id == job_id, Job.created_by == owner_id))
         )
         return result.scalar_one_or_none()
 
@@ -114,7 +101,7 @@ class JobService:
         owner_id: int,
         status: Optional[str] = None,
         page: int = 1,
-        page_size: int = 20
+        page_size: int = 20,
     ) -> Tuple[List[Job], int]:
         """
         List jobs with pagination.
@@ -147,11 +134,7 @@ class JobService:
 
         return list(jobs), total
 
-    async def cancel_job(
-        self,
-        job_id: str,
-        owner_id: int
-    ) -> bool:
+    async def cancel_job(self, job_id: str, owner_id: int) -> bool:
         """
         Cancel a running job.
 
@@ -183,10 +166,7 @@ class JobService:
         return True
 
     async def update_job_status(
-        self,
-        job_id: str,
-        status: JobStatus,
-        **kwargs
+        self, job_id: str, status: JobStatus, **kwargs
     ) -> Optional[Job]:
         """
         Update job status and trigger notifications.
@@ -206,16 +186,14 @@ class JobService:
         values.update(kwargs)
 
         # Update job in database
-        await self.db.execute(
-            update(Job).where(Job.id == job_id).values(**values)
-        )
+        await self.db.execute(update(Job).where(Job.id == job_id).values(**values))
         await self.db.commit()
 
         # Fetch updated job with user
         result = await self.db.execute(
-            select(Job, User).join(
-                User, Job.created_by == User.id
-            ).where(Job.id == job_id)
+            select(Job, User)
+            .join(User, Job.created_by == User.id)
+            .where(Job.id == job_id)
         )
         row = result.first()
 

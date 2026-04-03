@@ -10,9 +10,8 @@ Following TDD methodology: RED phase first.
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock
 from datetime import datetime, timedelta
-from typing import Any, Dict
 
 
 class TestCacheManager:
@@ -145,7 +144,9 @@ class TestQueryResultCaching:
         from src.api.cache import QueryCache
 
         mock_redis = AsyncMock()
-        cached_data = b'{"rows": [{"id": 1}], "row_count": 1, "cached_at": "2024-01-01T00:00:00"}'
+        cached_data = (
+            b'{"rows": [{"id": 1}], "row_count": 1, "cached_at": "2024-01-01T00:00:00"}'
+        )
         mock_redis.get.return_value = cached_data
 
         query_cache = QueryCache(redis_client=mock_redis)
@@ -210,7 +211,7 @@ class TestSessionCaching:
         session_data = {
             "user_id": 1,
             "username": "testuser",
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.utcnow().isoformat(),
         }
 
         await session_cache.set(session_id, session_data, ttl=3600)

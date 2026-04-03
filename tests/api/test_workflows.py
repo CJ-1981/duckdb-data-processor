@@ -8,16 +8,13 @@ through correct assertions using pytest.mark.parametrize and pytest-asyncio.
 """
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime
-from typing import Dict, Any, Optional, List
-from uuid import uuid4, UUID
-import json
+from uuid import uuid4
 
 from httpx import AsyncClient, ASGITransport
-from fastapi import FastAPI, status
-from fastapi.testclient import TestClient
-from pydantic import BaseModel, Field, ValidationError
+from fastapi import status
+from pydantic import ValidationError
 
 # Import models and schemas (will be created in GREEN phase)
 # from src.api.models.workflow import Workflow, WorkflowVersion
@@ -38,6 +35,7 @@ from pydantic import BaseModel, Field, ValidationError
 # Helper Functions for Testing
 # ============================================================================
 
+
 def setup_auth_mocks(app, mock_db_session, mock_current_user):
     """
     Setup FastAPI dependency overrides for authentication and database.
@@ -54,7 +52,6 @@ def setup_auth_mocks(app, mock_db_session, mock_current_user):
         None (modifies app.dependency_overrides in place)
     """
     from src.api.routes import workflows
-    from unittest.mock import AsyncMock
 
     # Create wrapper that returns the mock directly (not async)
     def override_get_db():
@@ -81,10 +78,12 @@ def cleanup_auth_mocks(app):
 # Test Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def app():
     """Create FastAPI app for testing."""
     from src.api.main import create_app
+
     app = create_app()
     return app
 
@@ -119,7 +118,12 @@ def mock_current_user():
         "sub": "1",
         "username": "testuser",
         "role": "analyst",
-        "permissions": ["workflows:create", "workflows:read", "workflows:write", "workflows:delete"]
+        "permissions": [
+            "workflows:create",
+            "workflows:read",
+            "workflows:write",
+            "workflows:delete",
+        ],
     }
 
 
@@ -131,32 +135,23 @@ def valid_workflow_definition():
             {
                 "id": "node1",
                 "type": "data_source",
-                "config": {
-                    "connector": "csv",
-                    "path": "data.csv"
-                }
+                "config": {"connector": "csv", "path": "data.csv"},
             },
             {
                 "id": "node2",
                 "type": "transform",
-                "config": {
-                    "operation": "filter",
-                    "expression": "age > 18"
-                }
+                "config": {"operation": "filter", "expression": "age > 18"},
             },
             {
                 "id": "node3",
                 "type": "data_sink",
-                "config": {
-                    "format": "duckdb",
-                    "table": "results"
-                }
-            }
+                "config": {"format": "duckdb", "table": "results"},
+            },
         ],
         "edges": [
             {"source": "node1", "target": "node2"},
-            {"source": "node2", "target": "node3"}
-        ]
+            {"source": "node2", "target": "node3"},
+        ],
     }
 
 
@@ -166,7 +161,7 @@ def valid_workflow_data(valid_workflow_definition):
     return {
         "name": "Test Workflow",
         "description": "A test workflow for data processing",
-        "definition": valid_workflow_definition
+        "definition": valid_workflow_definition,
     }
 
 
@@ -191,6 +186,7 @@ def mock_workflow(valid_workflow_definition):
 # Workflow Definition Schema Tests
 # ============================================================================
 
+
 class TestWorkflowDefinitionSchema:
     """Test workflow definition schema validation."""
 
@@ -209,9 +205,7 @@ class TestWorkflowDefinitionSchema:
         """Test workflow definition validation with missing nodes."""
         from src.api.schemas.workflow import WorkflowDefinition
 
-        invalid_definition = {
-            "edges": [{"source": "node1", "target": "node2"}]
-        }
+        invalid_definition = {"edges": [{"source": "node1", "target": "node2"}]}
 
         with pytest.raises(ValidationError) as exc_info:
             WorkflowDefinition(**invalid_definition)
@@ -238,9 +232,9 @@ class TestWorkflowDefinitionSchema:
         invalid_definition = {
             "nodes": [
                 {"id": "node1", "type": "data_source", "config": {}},
-                {"id": "node1", "type": "transform", "config": {}}  # Duplicate ID
+                {"id": "node1", "type": "transform", "config": {}},  # Duplicate ID
             ],
-            "edges": []
+            "edges": [],
         }
 
         with pytest.raises(ValidationError) as exc_info:
@@ -253,12 +247,10 @@ class TestWorkflowDefinitionSchema:
         from src.api.schemas.workflow import WorkflowDefinition
 
         invalid_definition = {
-            "nodes": [
-                {"id": "node1", "type": "data_source", "config": {}}
-            ],
+            "nodes": [{"id": "node1", "type": "data_source", "config": {}}],
             "edges": [
                 {"source": "node1", "target": "nonexistent"}  # Invalid target
-            ]
+            ],
         }
 
         with pytest.raises(ValidationError) as exc_info:
@@ -274,7 +266,7 @@ class TestWorkflowDefinitionSchema:
             "nodes": [
                 {"id": "", "type": "data_source", "config": {}}  # Empty ID
             ],
-            "edges": []
+            "edges": [],
         }
 
         with pytest.raises(ValidationError) as exc_info:
@@ -288,7 +280,7 @@ class TestWorkflowDefinitionSchema:
             "nodes": [
                 {"id": "x" * 101, "type": "data_source", "config": {}}  # Too long
             ],
-            "edges": []
+            "edges": [],
         }
 
         with pytest.raises(ValidationError) as exc_info:
@@ -299,6 +291,7 @@ class TestWorkflowDefinitionSchema:
 # Workflow CRUD Tests - Create
 # ============================================================================
 
+
 class TestWorkflowCreate:
     """Test workflow creation endpoint."""
 
@@ -307,7 +300,7 @@ class TestWorkflowCreate:
         self, app, mock_db_session, mock_current_user, valid_workflow_data
     ):
         """Test successful workflow creation."""
-        from unittest.mock import AsyncMock, Mock
+        from unittest.mock import Mock
         from src.api.routes import workflows
 
         app.include_router(workflows.router)
@@ -341,16 +334,20 @@ class TestWorkflowCreate:
 
             try:
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.post(
                         "/api/v1/workflows",
                         json=valid_workflow_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
             finally:
                 app.dependency_overrides = {}
 
-        assert response.status_code == status.HTTP_201_CREATED, f"Response: {response.text}"
+        assert response.status_code == status.HTTP_201_CREATED, (
+            f"Response: {response.text}"
+        )
         data = response.json()
         assert "id" in data
         assert data["name"] == valid_workflow_data["name"]
@@ -392,7 +389,9 @@ class TestWorkflowCreate:
 
         # Create async mock that returns different workflows on each call
         mock_service = AsyncMock()
-        mock_service.create_workflow = AsyncMock(side_effect=[mock_workflow1, mock_workflow2])
+        mock_service.create_workflow = AsyncMock(
+            side_effect=[mock_workflow1, mock_workflow2]
+        )
 
         # Setup authentication mocks
         setup_auth_mocks(app, mock_db_session, mock_current_user)
@@ -400,16 +399,18 @@ class TestWorkflowCreate:
         try:
             with patch.object(workflows, "WorkflowService", return_value=mock_service):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response1 = await client.post(
                         "/api/v1/workflows",
                         json=valid_workflow_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
                     response2 = await client.post(
                         "/api/v1/workflows",
                         json={**valid_workflow_data, "name": "Second Workflow"},
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -447,13 +448,17 @@ class TestWorkflowCreate:
         setup_auth_mocks(app, mock_db_session, mock_current_user)
 
         try:
-            with patch.object(workflows.WorkflowService, "create_workflow", mock_create):
+            with patch.object(
+                workflows.WorkflowService, "create_workflow", mock_create
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.post(
                         "/api/v1/workflows",
                         json=valid_workflow_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -475,9 +480,11 @@ class TestWorkflowCreate:
             "name": "Test Workflow",
             "description": "Test",
             "definition": {
-                "nodes": [{"id": "", "type": "data_source"}],  # Empty id (violates min_length=1)
-                "edges": []
-            }
+                "nodes": [
+                    {"id": "", "type": "data_source"}
+                ],  # Empty id (violates min_length=1)
+                "edges": [],
+            },
         }
 
         app.include_router(workflows.router)
@@ -487,11 +494,13 @@ class TestWorkflowCreate:
 
         try:
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 response = await client.post(
                     "/api/v1/workflows",
                     json=invalid_data,
-                    headers={"Authorization": "Bearer 1:testuser:analyst"}
+                    headers={"Authorization": "Bearer 1:testuser:analyst"},
                 )
         finally:
             cleanup_auth_mocks(app)
@@ -505,27 +514,24 @@ class TestWorkflowCreate:
         """Test workflow creation with missing name."""
         from src.api.routes.workflows import router
 
-        invalid_data = {
-            "description": "Test",
-            "definition": valid_workflow_definition
-        }
+        invalid_data = {"description": "Test", "definition": valid_workflow_definition}
 
         app.include_router(router)
 
         transport = ASGITransport(app=app)
 
-
         with patch("src.api.auth.dependencies.get_db", return_value=mock_db_session):
-
-
-            with patch("src.api.auth.dependencies.get_current_user", return_value=mock_current_user):
-
-
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+            with patch(
+                "src.api.auth.dependencies.get_current_user",
+                return_value=mock_current_user,
+            ):
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.post(
                         "/api/v1/workflows",
                         json=invalid_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -539,10 +545,7 @@ class TestWorkflowCreate:
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.post(
-                "/api/v1/workflows",
-                json=valid_workflow_data
-            )
+            response = await client.post("/api/v1/workflows", json=valid_workflow_data)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -559,7 +562,7 @@ class TestWorkflowCreate:
             "sub": "2",
             "username": "viewer",
             "role": "viewer",
-            "permissions": ["workflows:read"]  # Missing create permission
+            "permissions": ["workflows:read"],  # Missing create permission
         }
 
         # Mock the service layer
@@ -583,27 +586,30 @@ class TestWorkflowCreate:
         setup_auth_mocks(app, mock_db_session, unauthorized_user)
 
         try:
-            with patch.object(workflows.WorkflowService, "create_workflow", mock_create):
+            with patch.object(
+                workflows.WorkflowService, "create_workflow", mock_create
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.post(
                         "/api/v1/workflows",
                         json=valid_workflow_data,
-                        headers={"Authorization": "Bearer 2:viewer:viewer"}
+                        headers={"Authorization": "Bearer 2:viewer:viewer"},
                     )
         finally:
             cleanup_auth_mocks(app)
 
-        # Note: Authorization decorators are pass-through for now
-        # This test will succeed (201) but won't return 403 until authorization is enforced
-        # TODO: Enable when authorization is enforced (SPEC-PLATFORM-001 P2-T003)
-        # assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.status_code == status.HTTP_201_CREATED  # Pass for now
+        # Authorization decorators are now enforced
+        # Viewer should not be able to create workflows (requires workflows:create permission)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 # ============================================================================
 # Workflow CRUD Tests - Read (List)
 # ============================================================================
+
 
 class TestWorkflowList:
     """Test workflow list endpoint."""
@@ -614,7 +620,6 @@ class TestWorkflowList:
     ):
         """Test successful workflow list retrieval."""
         from src.api.routes import workflows
-        from unittest.mock import Mock
 
         # Mock the service layer
         async def mock_list(*args, **kwargs):
@@ -628,10 +633,12 @@ class TestWorkflowList:
         try:
             with patch.object(workflows.WorkflowService, "list_workflows", mock_list):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         "/api/v1/workflows",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -649,7 +656,6 @@ class TestWorkflowList:
     ):
         """Test workflow list pagination."""
         from src.api.routes import workflows
-        from unittest.mock import Mock
 
         # Create multiple mock workflows
         workflows_list = [mock_workflow for _ in range(5)]
@@ -666,10 +672,12 @@ class TestWorkflowList:
         try:
             with patch.object(workflows.WorkflowService, "list_workflows", mock_list):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         "/api/v1/workflows?page=2&page_size=10",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -700,10 +708,12 @@ class TestWorkflowList:
         try:
             with patch.object(workflows.WorkflowService, "list_workflows", mock_list):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         "/api/v1/workflows?is_active=true",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -711,9 +721,7 @@ class TestWorkflowList:
         assert response.status_code == status.HTTP_200_OK
 
     @pytest.mark.asyncio
-    async def test_list_workflows_empty(
-        self, app, mock_db_session, mock_current_user
-    ):
+    async def test_list_workflows_empty(self, app, mock_db_session, mock_current_user):
         """Test workflow list when no workflows exist."""
         from src.api.routes import workflows
 
@@ -729,10 +737,12 @@ class TestWorkflowList:
         try:
             with patch.object(workflows.WorkflowService, "list_workflows", mock_list):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         "/api/v1/workflows",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -760,6 +770,7 @@ class TestWorkflowList:
 # Workflow CRUD Tests - Read (Get by ID)
 # ============================================================================
 
+
 class TestWorkflowGet:
     """Test workflow get by ID endpoint."""
 
@@ -782,10 +793,12 @@ class TestWorkflowGet:
         try:
             with patch.object(workflows.WorkflowService, "get_workflow", mock_get):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         f"/api/v1/workflows/{mock_workflow.id}",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -815,10 +828,12 @@ class TestWorkflowGet:
         try:
             with patch.object(workflows.WorkflowService, "get_workflow", mock_get):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.get(
                         f"/api/v1/workflows/{str(uuid4())}",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -843,6 +858,7 @@ class TestWorkflowGet:
 # Workflow CRUD Tests - Update
 # ============================================================================
 
+
 class TestWorkflowUpdate:
     """Test workflow update endpoint."""
 
@@ -854,10 +870,7 @@ class TestWorkflowUpdate:
         from src.api.routes import workflows
         from unittest.mock import Mock
 
-        update_data = {
-            "name": "Updated Workflow",
-            "description": "Updated description"
-        }
+        update_data = {"name": "Updated Workflow", "description": "Updated description"}
 
         # Create updated mock workflow
         updated_workflow = Mock()
@@ -881,13 +894,17 @@ class TestWorkflowUpdate:
         setup_auth_mocks(app, mock_db_session, mock_current_user)
 
         try:
-            with patch.object(workflows.WorkflowService, "update_workflow", mock_update):
+            with patch.object(
+                workflows.WorkflowService, "update_workflow", mock_update
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.put(
                         f"/api/v1/workflows/{mock_workflow.id}",
                         json=update_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -898,7 +915,12 @@ class TestWorkflowUpdate:
 
     @pytest.mark.asyncio
     async def test_update_workflow_preserves_version_history(
-        self, app, mock_db_session, mock_current_user, mock_workflow, valid_workflow_definition
+        self,
+        app,
+        mock_db_session,
+        mock_current_user,
+        mock_workflow,
+        valid_workflow_definition,
     ):
         """Test workflow update creates version history entry."""
         from src.api.routes import workflows
@@ -906,7 +928,7 @@ class TestWorkflowUpdate:
 
         update_data = {
             "name": "Updated Workflow",
-            "definition": valid_workflow_definition
+            "definition": valid_workflow_definition,
         }
 
         # Track version before update
@@ -934,13 +956,17 @@ class TestWorkflowUpdate:
         setup_auth_mocks(app, mock_db_session, mock_current_user)
 
         try:
-            with patch.object(workflows.WorkflowService, "update_workflow", mock_update):
+            with patch.object(
+                workflows.WorkflowService, "update_workflow", mock_update
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.put(
                         f"/api/v1/workflows/{mock_workflow.id}",
                         json=update_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -968,13 +994,17 @@ class TestWorkflowUpdate:
         setup_auth_mocks(app, mock_db_session, mock_current_user)
 
         try:
-            with patch.object(workflows.WorkflowService, "update_workflow", mock_update):
+            with patch.object(
+                workflows.WorkflowService, "update_workflow", mock_update
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.put(
                         f"/api/v1/workflows/{str(uuid4())}",
                         json=update_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -991,7 +1021,7 @@ class TestWorkflowUpdate:
 
         patch_data = {
             "name": mock_workflow.name,  # Include name (required by schema)
-            "description": "Only updating description"
+            "description": "Only updating description",
         }
 
         # Create partially updated mock workflow
@@ -1016,13 +1046,17 @@ class TestWorkflowUpdate:
         setup_auth_mocks(app, mock_db_session, mock_current_user)
 
         try:
-            with patch.object(workflows.WorkflowService, "update_workflow", mock_update):
+            with patch.object(
+                workflows.WorkflowService, "update_workflow", mock_update
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.patch(
                         f"/api/v1/workflows/{mock_workflow.id}",
                         json=patch_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -1041,16 +1075,13 @@ class TestWorkflowUpdate:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.put(
-                f"/api/v1/workflows/{mock_workflow.id}",
-                json=valid_workflow_data
+                f"/api/v1/workflows/{mock_workflow.id}", json=valid_workflow_data
             )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.asyncio
-    async def test_update_workflow_forbidden(
-        self, app, mock_db_session, mock_workflow
-    ):
+    async def test_update_workflow_forbidden(self, app, mock_db_session, mock_workflow):
         """Test workflow update without proper permissions."""
         from src.api.routes import workflows
 
@@ -1058,7 +1089,7 @@ class TestWorkflowUpdate:
             "sub": "2",
             "username": "viewer",
             "role": "viewer",
-            "permissions": ["workflows:read"]  # Missing write permission
+            "permissions": ["workflows:read"],  # Missing write permission
         }
 
         update_data = {"name": "Updated Workflow"}
@@ -1073,27 +1104,30 @@ class TestWorkflowUpdate:
         setup_auth_mocks(app, mock_db_session, unauthorized_user)
 
         try:
-            with patch.object(workflows.WorkflowService, "update_workflow", mock_update):
+            with patch.object(
+                workflows.WorkflowService, "update_workflow", mock_update
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.put(
                         f"/api/v1/workflows/{mock_workflow.id}",
                         json=update_data,
-                        headers={"Authorization": "Bearer 2:viewer:viewer"}
+                        headers={"Authorization": "Bearer 2:viewer:viewer"},
                     )
         finally:
             cleanup_auth_mocks(app)
 
-        # Note: Authorization decorators are pass-through for now
-        # This test will succeed but won't return 403 until authorization is enforced
-        # TODO: Enable when authorization is enforced (SPEC-PLATFORM-001 P2-T003)
-        # assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.status_code == status.HTTP_200_OK  # Pass for now
+        # Authorization decorators are now enforced
+        # Viewer should not be able to update workflows (requires workflows:update permission)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 # ============================================================================
 # Workflow CRUD Tests - Delete
 # ============================================================================
+
 
 class TestWorkflowDelete:
     """Test workflow delete endpoint."""
@@ -1115,12 +1149,16 @@ class TestWorkflowDelete:
         setup_auth_mocks(app, mock_db_session, mock_current_user)
 
         try:
-            with patch.object(workflows.WorkflowService, "delete_workflow", mock_delete):
+            with patch.object(
+                workflows.WorkflowService, "delete_workflow", mock_delete
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.delete(
                         f"/api/v1/workflows/{mock_workflow.id}",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -1146,12 +1184,16 @@ class TestWorkflowDelete:
         setup_auth_mocks(app, mock_db_session, mock_current_user)
 
         try:
-            with patch.object(workflows.WorkflowService, "delete_workflow", mock_delete):
+            with patch.object(
+                workflows.WorkflowService, "delete_workflow", mock_delete
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     await client.delete(
                         f"/api/v1/workflows/{mock_workflow.id}",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -1177,12 +1219,16 @@ class TestWorkflowDelete:
         setup_auth_mocks(app, mock_db_session, mock_current_user)
 
         try:
-            with patch.object(workflows.WorkflowService, "delete_workflow", mock_delete):
+            with patch.object(
+                workflows.WorkflowService, "delete_workflow", mock_delete
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.delete(
                         f"/api/v1/workflows/{str(uuid4())}",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
         finally:
             cleanup_auth_mocks(app)
@@ -1203,9 +1249,7 @@ class TestWorkflowDelete:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.asyncio
-    async def test_delete_workflow_forbidden(
-        self, app, mock_db_session, mock_workflow
-    ):
+    async def test_delete_workflow_forbidden(self, app, mock_db_session, mock_workflow):
         """Test workflow deletion without proper permissions."""
         from src.api.routes import workflows
 
@@ -1213,7 +1257,7 @@ class TestWorkflowDelete:
             "sub": "2",
             "username": "viewer",
             "role": "viewer",
-            "permissions": ["workflows:read"]  # Missing delete permission
+            "permissions": ["workflows:read"],  # Missing delete permission
         }
 
         # Mock the service layer
@@ -1226,26 +1270,29 @@ class TestWorkflowDelete:
         setup_auth_mocks(app, mock_db_session, unauthorized_user)
 
         try:
-            with patch.object(workflows.WorkflowService, "delete_workflow", mock_delete):
+            with patch.object(
+                workflows.WorkflowService, "delete_workflow", mock_delete
+            ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     response = await client.delete(
                         f"/api/v1/workflows/{mock_workflow.id}",
-                        headers={"Authorization": "Bearer 2:viewer:viewer"}
+                        headers={"Authorization": "Bearer 2:viewer:viewer"},
                     )
         finally:
             cleanup_auth_mocks(app)
 
-        # Note: Authorization decorators are pass-through for now
-        # This test will succeed but won't return 403 until authorization is enforced
-        # TODO: Enable when authorization is enforced (SPEC-PLATFORM-001 P2-T003)
-        # assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.status_code == status.HTTP_204_NO_CONTENT  # Pass for now
+        # Authorization decorators are now enforced
+        # Viewer should not be able to delete workflows (requires workflows:delete permission)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 # ============================================================================
 # Workflow Lifecycle Integration Test
 # ============================================================================
+
 
 class TestWorkflowLifecycle:
     """Test complete workflow CRUD lifecycle."""
@@ -1302,15 +1349,17 @@ class TestWorkflowLifecycle:
                 get_workflow=mock_get,
                 list_workflows=mock_list,
                 update_workflow=mock_update,
-                delete_workflow=mock_delete
+                delete_workflow=mock_delete,
             ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     # 1. CREATE
                     create_response = await client.post(
                         "/api/v1/workflows",
                         json=valid_workflow_data,
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
                     assert create_response.status_code == status.HTTP_201_CREATED
                     workflow_id = create_response.json()["id"]
@@ -1318,14 +1367,14 @@ class TestWorkflowLifecycle:
                     # 2. READ (Get by ID)
                     get_response = await client.get(
                         f"/api/v1/workflows/{workflow_id}",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
                     assert get_response.status_code == status.HTTP_200_OK
 
                     # 3. LIST
                     list_response = await client.get(
                         "/api/v1/workflows",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
                     assert list_response.status_code == status.HTTP_200_OK
                     assert len(list_response.json()["workflows"]) > 0
@@ -1334,14 +1383,14 @@ class TestWorkflowLifecycle:
                     update_response = await client.put(
                         f"/api/v1/workflows/{workflow_id}",
                         json={"name": "Updated Name"},
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
                     assert update_response.status_code == status.HTTP_200_OK
 
                     # 5. DELETE
                     delete_response = await client.delete(
                         f"/api/v1/workflows/{workflow_id}",
-                        headers={"Authorization": "Bearer 1:testuser:analyst"}
+                        headers={"Authorization": "Bearer 1:testuser:analyst"},
                     )
                     assert delete_response.status_code == status.HTTP_204_NO_CONTENT
         finally:
@@ -1352,39 +1401,74 @@ class TestWorkflowLifecycle:
 # RBAC Integration Tests
 # ============================================================================
 
+
 class TestWorkflowRBAC:
     """Test role-based access control for workflow endpoints."""
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("role,permissions,endpoint,method,expected_status", [
-        # Admin - full access
-        ("admin", ["*"], "/api/v1/workflows", "POST", 201),
-        ("admin", ["*"], "/api/v1/workflows", "GET", 200),
-        ("admin", ["*"], "/api/v1/workflows/{id}", "PUT", 200),
-        ("admin", ["*"], "/api/v1/workflows/{id}", "DELETE", 204),
-        # Analyst - create, read, write
-        ("analyst", ["workflows:create", "workflows:read", "workflows:write"], "/api/v1/workflows", "POST", 201),
-        ("analyst", ["workflows:create", "workflows:read", "workflows:write"], "/api/v1/workflows", "GET", 200),
-        ("analyst", ["workflows:create", "workflows:read", "workflows:write"], "/api/v1/workflows/{id}", "PUT", 200),
-        ("analyst", ["workflows:create", "workflows:read", "workflows:write"], "/api/v1/workflows/{id}", "DELETE", 403),
-        # Viewer - read only
-        ("viewer", ["workflows:read"], "/api/v1/workflows", "POST", 403),
-        ("viewer", ["workflows:read"], "/api/v1/workflows", "GET", 200),
-        ("viewer", ["workflows:read"], "/api/v1/workflows/{id}", "PUT", 403),
-        ("viewer", ["workflows:read"], "/api/v1/workflows/{id}", "DELETE", 403),
-    ])
+    @pytest.mark.parametrize(
+        "role,permissions,endpoint,method,expected_status",
+        [
+            # Admin - full access
+            ("admin", ["*"], "/api/v1/workflows", "POST", 201),
+            ("admin", ["*"], "/api/v1/workflows", "GET", 200),
+            ("admin", ["*"], "/api/v1/workflows/{id}", "PUT", 200),
+            ("admin", ["*"], "/api/v1/workflows/{id}", "DELETE", 204),
+            # Analyst - create, read, write
+            (
+                "analyst",
+                ["workflows:create", "workflows:read", "workflows:write"],
+                "/api/v1/workflows",
+                "POST",
+                201,
+            ),
+            (
+                "analyst",
+                ["workflows:create", "workflows:read", "workflows:write"],
+                "/api/v1/workflows",
+                "GET",
+                200,
+            ),
+            (
+                "analyst",
+                ["workflows:create", "workflows:read", "workflows:write"],
+                "/api/v1/workflows/{id}",
+                "PUT",
+                200,
+            ),
+            (
+                "analyst",
+                ["workflows:create", "workflows:read", "workflows:write"],
+                "/api/v1/workflows/{id}",
+                "DELETE",
+                403,
+            ),
+            # Viewer - read only
+            ("viewer", ["workflows:read"], "/api/v1/workflows", "POST", 403),
+            ("viewer", ["workflows:read"], "/api/v1/workflows", "GET", 200),
+            ("viewer", ["workflows:read"], "/api/v1/workflows/{id}", "PUT", 403),
+            ("viewer", ["workflows:read"], "/api/v1/workflows/{id}", "DELETE", 403),
+        ],
+    )
     async def test_rbac_permissions(
-        self, app, mock_db_session, mock_workflow, role, permissions, endpoint, method, expected_status
+        self,
+        app,
+        mock_db_session,
+        mock_workflow,
+        role,
+        permissions,
+        endpoint,
+        method,
+        expected_status,
     ):
         """Test RBAC permissions for different roles."""
         from src.api.routes import workflows
-        from unittest.mock import Mock
 
         user = {
             "sub": "1",
             "username": "testuser",
             "role": role,
-            "permissions": permissions
+            "permissions": permissions,
         }
 
         # Mock service methods
@@ -1417,31 +1501,45 @@ class TestWorkflowRBAC:
                 get_workflow=mock_get,
                 list_workflows=mock_list,
                 update_workflow=mock_update,
-                delete_workflow=mock_delete
+                delete_workflow=mock_delete,
             ):
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     if method == "POST":
                         response = await client.post(
                             endpoint,
-                            json={"name": "Test", "definition": {"nodes": [{"id": "n1", "type": "data_source", "config": {}}], "edges": []}},
-                            headers={"Authorization": f"Bearer 1:testuser:{role}"}
+                            json={
+                                "name": "Test",
+                                "definition": {
+                                    "nodes": [
+                                        {
+                                            "id": "n1",
+                                            "type": "data_source",
+                                            "config": {},
+                                        }
+                                    ],
+                                    "edges": [],
+                                },
+                            },
+                            headers={"Authorization": f"Bearer 1:testuser:{role}"},
                         )
                     elif method == "GET":
                         response = await client.get(
                             endpoint,
-                            headers={"Authorization": f"Bearer 1:testuser:{role}"}
+                            headers={"Authorization": f"Bearer 1:testuser:{role}"},
                         )
                     elif method == "PUT":
                         response = await client.put(
                             endpoint,
                             json={"name": "Updated"},
-                            headers={"Authorization": f"Bearer 1:testuser:{role}"}
+                            headers={"Authorization": f"Bearer 1:testuser:{role}"},
                         )
                     elif method == "DELETE":
                         response = await client.delete(
                             endpoint,
-                            headers={"Authorization": f"Bearer 1:testuser:{role}"}
+                            headers={"Authorization": f"Bearer 1:testuser:{role}"},
                         )
         finally:
             cleanup_auth_mocks(app)

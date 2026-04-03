@@ -11,10 +11,8 @@ Main integration point for data processing that combines:
 """
 
 import logging
-from typing import Optional, Dict, Any, List, Union, Callable
+from typing import Optional, Dict, Any, List, Union
 from pathlib import Path
-import threading
-import time
 
 import duckdb
 import pandas as pd
@@ -22,7 +20,7 @@ import pandas as pd
 from ..plugins import PluginRegistry, Plugin
 from ..config.loader import Config
 from ..database import DatabaseConnection
-from ..connectors import CSVConnector, get_connector, CONNECTOR_REGISTRY
+from ..connectors import CSVConnector
 from .streaming import StreamProcessor
 from .query import QueryExecutor
 from .export import DataExporter
@@ -84,30 +82,34 @@ class Processor:
             self._connection = connection
             self._owns_connection = False
         else:
-            self._connection = duckdb.connect(':memory:')
+            self._connection = duckdb.connect(":memory:")
             self._owns_connection = True
 
         # Initialize components
         self._columns: List[str] = []
-        self._table_name = 'data'
+        self._table_name = "data"
         self._cache: Dict[str, Any] = {}
         self._cache_enabled = cache_enabled
         self._query_history: List[Dict[str, Any]] = []
         self._track_queries = track_queries
 
         # Memory settings
-        self._max_memory_mb = max_memory_mb or self._config.get('processor.max_memory_mb', 512)
-        self._streaming_threshold_mb = streaming_threshold_mb or self._config.get('processor.streaming_threshold_mb', 100)
+        self._max_memory_mb = max_memory_mb or self._config.get(
+            "processor.max_memory_mb", 512
+        )
+        self._streaming_threshold_mb = streaming_threshold_mb or self._config.get(
+            "processor.streaming_threshold_mb", 100
+        )
 
         # Initialize plugin registry
         if plugin_registry:
             self._plugin_registry = plugin_registry
         else:
-            plugin_search_paths = self._config.get('processor.plugins.search_paths', [])
+            plugin_search_paths = self._config.get("processor.plugins.search_paths", [])
             self._plugin_registry = PluginRegistry(search_paths=plugin_search_paths)
 
             # Auto-load plugins if configured
-            if self._config.get('processor.plugins.auto_load', False):
+            if self._config.get("processor.plugins.auto_load", False):
                 self._plugin_registry.load_plugins()
 
         # Initialize stream processor
@@ -117,20 +119,17 @@ class Processor:
         self._query_executor = QueryExecutor(
             connection=self._connection,
             cache_enabled=cache_enabled,
-            track_queries=track_queries
+            track_queries=track_queries,
         )
 
         # Initialize data exporter
-        self._exporter = DataExporter(
-            connection=self._connection,
-            config=self._config
-        )
+        self._exporter = DataExporter(connection=self._connection, config=self._config)
 
         # Initialize connector registry reference
         self._connectors: Dict[str, Any] = {}
 
         # Call plugin hook
-        self._call_plugin_hook('on_processor_load', self)
+        self._call_plugin_hook("on_processor_load", self)
 
         logger.info("Processor initialized successfully")
 
@@ -183,9 +182,9 @@ class Processor:
         self,
         csv_path: str,
         table_name: Optional[str] = None,
-        delimiter: str = ',',
+        delimiter: str = ",",
         has_header: bool = True,
-        encoding: str = 'utf-8',
+        encoding: str = "utf-8",
     ) -> pd.DataFrame:
         """
         Load CSV file into processor
@@ -211,9 +210,7 @@ class Processor:
 
         # Create CSV connector
         connector = CSVConnector(
-            delimiter=delimiter,
-            has_header=has_header,
-            encoding=encoding
+            delimiter=delimiter, has_header=has_header, encoding=encoding
         )
 
         # Get file size for streaming decision
@@ -233,7 +230,7 @@ class Processor:
         table_name: Optional[str] = None,
     ) -> pd.DataFrame:
         """Load CSV directly into memory"""
-        target_table = table_name or 'data'
+        target_table = table_name or "data"
         self._table_name = target_table
 
         # Read CSV data
@@ -252,9 +249,11 @@ class Processor:
         self._insert_rows(rows, target_table)
 
         # Call plugin hook
-        self._call_plugin_hook('on_data_load', rows)
+        self._call_plugin_hook("on_data_load", rows)
 
-        logger.info(f"Loaded {len(rows)} rows from {csv_path} into table {target_table}")
+        logger.info(
+            f"Loaded {len(rows)} rows from {csv_path} into table {target_table}"
+        )
 
         return self.preview()
 
@@ -265,7 +264,7 @@ class Processor:
         table_name: Optional[str] = None,
     ) -> pd.DataFrame:
         """Load CSV using streaming for large files"""
-        target_table = table_name or 'data'
+        target_table = table_name or "data"
         self._table_name = target_table
 
         # Initialize streaming
@@ -284,9 +283,11 @@ class Processor:
             total_rows += len(chunk)
 
         # Call plugin hook
-        self._call_plugin_hook('on_data_load', {'rows_loaded': total_rows})
+        self._call_plugin_hook("on_data_load", {"rows_loaded": total_rows})
 
-        logger.info(f"Streamed {total_rows} rows from {csv_path} into table {target_table}")
+        logger.info(
+            f"Streamed {total_rows} rows from {csv_path} into table {target_table}"
+        )
 
         return self.preview()
 
@@ -312,10 +313,7 @@ class Processor:
         raise NotImplementedError("Database loading not yet implemented")
 
     def load_api(
-        self,
-        api_url: str,
-        table_name: Optional[str] = None,
-        **kwargs
+        self, api_url: str, table_name: Optional[str] = None, **kwargs
     ) -> pd.DataFrame:
         """
         Load data from API endpoint
@@ -349,11 +347,11 @@ class Processor:
         self._columns = list(all_columns)
 
         # Build CREATE TABLE statement
-        column_defs = ', '.join(f'"{col}" VARCHAR' for col in self._columns)
-        column_defs += ', _row INTEGER'
+        column_defs = ", ".join(f'"{col}" VARCHAR' for col in self._columns)
+        column_defs += ", _row INTEGER"
 
-        self._connection.execute(f'DROP TABLE IF EXISTS {table_name}')
-        self._connection.execute(f'CREATE TABLE {table_name} ({column_defs})')
+        self._connection.execute(f"DROP TABLE IF EXISTS {table_name}")
+        self._connection.execute(f"CREATE TABLE {table_name} ({column_defs})")
 
     def _insert_rows(self, rows: List[Dict], table_name: str) -> None:
         """Insert rows into table"""
@@ -361,16 +359,17 @@ class Processor:
             return
 
         # Build INSERT statement
-        col_list = ', '.join(f'"{col}"' for col in self._columns) + ', _row'
-        placeholders = ', '.join(['?'] * (len(self._columns) + 1))
+        col_list = ", ".join(f'"{col}"' for col in self._columns) + ", _row"
+        placeholders = ", ".join(["?"] * (len(self._columns) + 1))
 
         for i, row in enumerate(rows):
-            values = [str(row.get(col, '')) if row.get(col, '') != '' else None
-                     for col in self._columns]
+            values = [
+                str(row.get(col, "")) if row.get(col, "") != "" else None
+                for col in self._columns
+            ]
             values.append(i)
             self._connection.execute(
-                f'INSERT INTO {table_name} ({col_list}) VALUES ({placeholders})',
-                values
+                f"INSERT INTO {table_name} ({col_list}) VALUES ({placeholders})", values
             )
 
     # ========================================================================
@@ -400,7 +399,7 @@ class Processor:
         Returns:
             DataFrame with preview data
         """
-        return self.sql(f'SELECT * FROM {self._table_name} LIMIT {n}')
+        return self.sql(f"SELECT * FROM {self._table_name} LIMIT {n}")
 
     def schema(self) -> pd.DataFrame:
         """
@@ -409,7 +408,7 @@ class Processor:
         Returns:
             DataFrame with schema information
         """
-        return self.sql(f'DESCRIBE {self._table_name}')
+        return self.sql(f"DESCRIBE {self._table_name}")
 
     def coverage(self) -> pd.DataFrame:
         """
@@ -419,7 +418,7 @@ class Processor:
             DataFrame with coverage information
         """
         total = self._connection.execute(
-            f'SELECT COUNT(*) FROM {self._table_name}'
+            f"SELECT COUNT(*) FROM {self._table_name}"
         ).fetchone()[0]
 
         rows = []
@@ -427,11 +426,13 @@ class Processor:
             count = self._connection.execute(
                 f'SELECT COUNT(*) FROM {self._table_name} WHERE "{col}" IS NOT NULL AND "{col}" != \'\''
             ).fetchone()[0]
-            rows.append({
-                'column': col,
-                'present': count,
-                'coverage_%': round(count / total * 100, 1) if total else 0
-            })
+            rows.append(
+                {
+                    "column": col,
+                    "present": count,
+                    "coverage_%": round(count / total * 100, 1) if total else 0,
+                }
+            )
 
         return pd.DataFrame(rows)
 
@@ -449,7 +450,7 @@ class Processor:
         Returns:
             DataFrame with filtered rows
         """
-        return self.sql(f'SELECT * FROM {self._table_name} WHERE {where}')
+        return self.sql(f"SELECT * FROM {self._table_name} WHERE {where}")
 
     def create_view(self, name: str, where: str) -> None:
         """
@@ -460,8 +461,8 @@ class Processor:
             where: WHERE clause condition
         """
         self._connection.execute(
-            f'CREATE OR REPLACE VIEW {name} AS '
-            f'SELECT * FROM {self._table_name} WHERE {where}'
+            f"CREATE OR REPLACE VIEW {name} AS "
+            f"SELECT * FROM {self._table_name} WHERE {where}"
         )
         logger.info(f"View '{name}' created")
 
@@ -477,13 +478,17 @@ class Processor:
         tbl = source or self._table_name
 
         # Check if column exists and drop it
-        existing = [r[0] for r in self._connection.execute(f'DESCRIBE {tbl}').fetchall()]
+        existing = [
+            r[0] for r in self._connection.execute(f"DESCRIBE {tbl}").fetchall()
+        ]
         if new_col in existing:
             self._connection.execute(f'ALTER TABLE {tbl} DROP COLUMN "{new_col}"')
 
         # Add column
         self._connection.execute(f'ALTER TABLE {tbl} ADD COLUMN "{new_col}" VARCHAR')
-        self._connection.execute(f'UPDATE {tbl} SET "{new_col}" = CAST(({expr}) AS VARCHAR)')
+        self._connection.execute(
+            f'UPDATE {tbl} SET "{new_col}" = CAST(({expr}) AS VARCHAR)'
+        )
         self._columns.append(new_col)
 
         logger.info(f"Column '{new_col}' added")
@@ -492,8 +497,8 @@ class Processor:
         self,
         group_by: Union[str, List[str]],
         agg_field: str,
-        func: str = 'SUM',
-        source: Optional[str] = None
+        func: str = "SUM",
+        source: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Group-by aggregation
@@ -510,7 +515,7 @@ class Processor:
         tbl = source or self._table_name
 
         if isinstance(group_by, list):
-            gb = ', '.join(f'"{c}"' for c in group_by)
+            gb = ", ".join(f'"{c}"' for c in group_by)
         else:
             gb = f'"{group_by}"'
 
@@ -529,8 +534,8 @@ class Processor:
         row_key: str,
         col_key: str,
         val: str,
-        func: str = 'SUM',
-        source: Optional[str] = None
+        func: str = "SUM",
+        source: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Cross-tab two categorical keys
@@ -555,9 +560,9 @@ class Processor:
         col_vals = [r[0] for r in col_vals]
 
         # Build CASE expressions
-        cases = ', '.join(
+        cases = ", ".join(
             f"ROUND({func}(CASE WHEN \"{col_key}\" = '{v}' "
-            f"THEN TRY_CAST(\"{val}\" AS DOUBLE) END), 2) AS \"{v}\""
+            f'THEN TRY_CAST("{val}" AS DOUBLE) END), 2) AS "{v}"'
             for v in col_vals
         )
 
@@ -580,7 +585,7 @@ class Processor:
             path: Output file path
             query: SQL query (optional, exports full table if not provided)
         """
-        q = query or f'SELECT * FROM {self._table_name}'
+        q = query or f"SELECT * FROM {self._table_name}"
         self._connection.execute(f"COPY ({q}) TO '{path}' (HEADER, DELIMITER ',')")
         logger.info(f"Exported to {path}")
 
@@ -592,8 +597,8 @@ class Processor:
             path: Output file path
             query: SQL query (optional)
         """
-        q = query or f'SELECT * FROM {self._table_name}'
-        rows = self._connection.execute(q).df().to_dict(orient='records')
+        q = query or f"SELECT * FROM {self._table_name}"
+        rows = self._connection.execute(q).df().to_dict(orient="records")
         Path(path).write_text(json.dumps(rows, indent=2, default=str))
         logger.info(f"Exported to {path}")
 
@@ -605,7 +610,7 @@ class Processor:
             path: Output file path
             query: SQL query (optional)
         """
-        q = query or f'SELECT * FROM {self._table_name}'
+        q = query or f"SELECT * FROM {self._table_name}"
         self._connection.execute(f"COPY ({q}) TO '{path}' (FORMAT PARQUET)")
         logger.info(f"Exported to {path}")
 
@@ -632,13 +637,13 @@ class Processor:
         """
         if not self._stream_processor:
             # Create database connection wrapper for streaming
-            db_connection = DatabaseConnection(':memory:')
+            db_connection = DatabaseConnection(":memory:")
             db_connection._connection = self._connection
 
             self._stream_processor = StreamProcessor(
                 db_connection=db_connection,
                 memory_limit_mb=self._max_memory_mb,
-                chunk_size=chunk_size
+                chunk_size=chunk_size,
             )
 
         yield from self._stream_processor.stream_query(query, parameters)
@@ -663,6 +668,7 @@ class Processor:
         """Check if stream is paused"""
         if self._stream_processor:
             from .processor.streaming import StreamingState
+
             return self._stream_processor.state == StreamingState.PAUSED
         return False
 
@@ -671,6 +677,7 @@ class Processor:
         """Check if stream is cancelled"""
         if self._stream_processor:
             from .processor.streaming import StreamingState
+
             return self._stream_processor.state == StreamingState.CANCELLED
         return False
 
@@ -687,7 +694,7 @@ class Processor:
             *args: Positional arguments
             **kwargs: Keyword arguments
         """
-        if not self._config.get('processor.plugins.enabled', False):
+        if not self._config.get("processor.plugins.enabled", False):
             return
 
         for plugin in self._plugin_registry.get_enabled_plugins():
@@ -720,14 +727,14 @@ class Processor:
             Dictionary with row count, column count, and other stats
         """
         row_count = self._connection.execute(
-            f'SELECT COUNT(*) FROM {self._table_name}'
+            f"SELECT COUNT(*) FROM {self._table_name}"
         ).fetchone()[0]
 
         return {
-            'row_count': row_count,
-            'column_count': len(self._columns),
-            'columns': self._columns,
-            'table_name': self._table_name,
+            "row_count": row_count,
+            "column_count": len(self._columns),
+            "columns": self._columns,
+            "table_name": self._table_name,
         }
 
     def get_query_history(self) -> List[Dict[str, Any]]:
@@ -749,7 +756,7 @@ class Processor:
         Returns:
             Execution plan
         """
-        return self._connection.execute(f'EXPLAIN {query}').fetchall()
+        return self._connection.execute(f"EXPLAIN {query}").fetchall()
 
     # ========================================================================
     #  Context Manager Support

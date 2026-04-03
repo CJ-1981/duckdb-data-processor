@@ -16,13 +16,13 @@ from enum import Enum as PyEnum
 from .base import BaseModel
 
 if TYPE_CHECKING:
-    from .workflow import Workflow
-    from .job import Job
+    pass
 
 
 # Role enumeration
 class UserRole(str, PyEnum):
     """User role enumeration for RBAC"""
+
     admin = "admin"
     analyst = "analyst"
     viewer = "viewer"
@@ -58,10 +58,10 @@ class User(BaseModel):
 
         # Set defaults AFTER SQLAlchemy initialization
         # Column defaults only apply at DB level, not Python object level
-        if not hasattr(self, 'is_active') or self.is_active is None:
-            object.__setattr__(self, 'is_active', True)
-        if not hasattr(self, 'role') or self.role is None:
-            object.__setattr__(self, 'role', UserRole.viewer)
+        if not hasattr(self, "is_active") or self.is_active is None:
+            object.__setattr__(self, "is_active", True)
+        if not hasattr(self, "role") or self.role is None:
+            object.__setattr__(self, "role", UserRole.viewer)
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username={self.username}, role={self.role})>"
@@ -98,6 +98,7 @@ class User(BaseModel):
 # This must be defined after the User class
 from sqlalchemy import event
 
+
 @event.listens_for(User, "init", propagate=True)
 def set_user_defaults(target, args, kwargs):
     """Set default values for User model after SQLAlchemy initialization
@@ -110,7 +111,7 @@ def set_user_defaults(target, args, kwargs):
     """
     # Set defaults directly on the instance using object.__setattr__
     # This bypasses any SQLAlchemy attribute tracking
-    if not hasattr(target, 'is_active') or getattr(target, 'is_active', None) is None:
-        object.__setattr__(target, 'is_active', True)
-    if not hasattr(target, 'role') or getattr(target, 'role', None) is None:
-        object.__setattr__(target, 'role', UserRole.viewer)
+    if not hasattr(target, "is_active") or getattr(target, "is_active", None) is None:
+        object.__setattr__(target, "is_active", True)
+    if not hasattr(target, "role") or getattr(target, "role", None) is None:
+        object.__setattr__(target, "role", UserRole.viewer)

@@ -39,7 +39,9 @@ class QueryCache:
         self.manager = CacheManager(redis_client)
         self.default_ttl = default_ttl
 
-    async def set(self, query: str, result: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+    async def set(
+        self, query: str, result: Dict[str, Any], ttl: Optional[int] = None
+    ) -> bool:
         """
         Cache a query result.
 
@@ -128,10 +130,7 @@ class QueryCache:
         async for key in self.redis.scan_iter(match=pattern):
             keys.append(key)
 
-        return {
-            "total_cached_queries": len(keys),
-            "default_ttl": self.default_ttl
-        }
+        return {"total_cached_queries": len(keys), "default_ttl": self.default_ttl}
 
 
-__all__ = ['QueryCache']
+__all__ = ["QueryCache"]

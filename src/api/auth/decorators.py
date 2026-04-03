@@ -8,8 +8,8 @@ Authorization decorators for FastAPI endpoints.
 """
 
 from functools import wraps
-from typing import Callable, List, Optional
-from fastapi import HTTPException, status, Depends
+from typing import Callable, Optional
+from fastapi import HTTPException, status
 
 import logging
 
@@ -22,23 +22,64 @@ def require_role(*roles: str):
 
     User must have ANY of the specified roles to access the endpoint.
 
-    @MX:NOTE: For now, this is a pass-through decorator. Role checking should be done in the endpoint function.
-
     Args:
         *roles: Required role names (any one is sufficient)
 
     Usage:
         @require_role("admin")
-        async def admin_only_endpoint(...):
-            # Check current_user["role"] in function body
+        async def admin_only_endpoint(current_user: dict = None):
+            # User must have "admin" role
             pass
+
+    Raises:
+        HTTPException: 403 Forbidden if user lacks required role
     """
+
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            # Pass-through - authorization should be checked in function body
+            # Get current_user from kwargs or args
+            # FastAPI dependencies are passed as kwargs
+            current_user = kwargs.get("current_user") or (
+                args[0]
+                if args and isinstance(args[0], dict) and "role" in args[0]
+                else None
+            )
+
+            if not current_user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication required",
+                )
+
+            user_role = current_user.get("role", "viewer")
+
+            # Check if user has any of the required roles
+            if user_role not in roles:
+                log_authorization(
+                    user_id=current_user.get("id"),
+                    username=current_user.get("username"),
+                    permission=f"role:({'|'.join(roles)})",
+                    granted=False,
+                    reason=f"User has role '{user_role}', required one of: {roles}",
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Permission denied: requires one of roles: {roles}",
+                )
+
+            # Log successful authorization
+            log_authorization(
+                user_id=current_user.get("id"),
+                username=current_user.get("username"),
+                permission=f"role:({'|'.join(roles)})",
+                granted=True,
+            )
+
             return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -48,23 +89,69 @@ def require_permission(*permissions: str):
 
     User must have ALL of the specified permissions to access the endpoint.
 
-    @MX:NOTE: For now, this is a pass-through decorator. Permission checking should be done in the endpoint function.
-
     Args:
         *permissions: Required permission strings (all are required)
 
     Usage:
         @require_permission("data:read")
         async def read_data_endpoint(current_user: dict = Depends(get_current_user)):
-            # Check permissions in function body
+            # User must have "data:read" permission
             pass
+
+    Raises:
+        HTTPException: 403 Forbidden if user lacks required permissions
     """
+
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            # Pass-through - authorization should be checked in function body
+            # Get current_user from kwargs or args
+            current_user = kwargs.get("current_user") or (
+                args[0]
+                if args and isinstance(args[0], dict) and "permissions" in args[0]
+                else None
+            )
+
+            if not current_user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication required",
+                )
+
+            user_permissions = current_user.get("permissions", [])
+
+            # Check for wildcard permission (admin has all permissions)
+            if "*" not in user_permissions:
+                # Check if user has ALL of the required permissions
+                missing_permissions = [
+                    p for p in permissions if p not in user_permissions
+                ]
+
+                if missing_permissions:
+                    log_authorization(
+                        user_id=current_user.get("id"),
+                        username=current_user.get("username"),
+                        permission=f"permission:({', '.join(permissions)})",
+                        granted=False,
+                        reason=f"Missing permissions: {missing_permissions}",
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Permission denied: requires permissions: {permissions}",
+                    )
+
+            # Log successful authorization
+            log_authorization(
+                user_id=current_user.get("id"),
+                username=current_user.get("username"),
+                permission=f"permission:({', '.join(permissions)})",
+                granted=True,
+            )
+
             return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 

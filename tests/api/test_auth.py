@@ -6,15 +6,16 @@ using `pytest.mark.parametrize` along with `pytest-asyncio` for async testing.
 """
 
 import pytest
+
 try:
     import jwt
 except ImportError:
     # PyJWT not installed, skip this test file
     pytest.skip("PyJWT not installed", allow_module_level=True)
 
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+
 
 # Test data fixtures
 @pytest.fixture
@@ -83,6 +84,7 @@ def mock_token_generator():
 # Password Security Tests
 # ============================================================================
 
+
 class TestPasswordHashing:
     """Test password hashing functionality"""
 
@@ -115,17 +117,24 @@ class TestPasswordHashing:
 
         assert password_hasher.validate_password_strength(password) is True
 
-    @pytest.mark.parametrize("password,expected", [
-        ("ShortPass1", False),
-        ("weakpass", False),
-        ("NoUpper123", False),
-        ("NoLower123", False),
-        ("NoNumber123", False),
-        ("Valid123", True),
-    ])
-    def test_validate_password_strength(self, password_hasher, password: str, expected: bool):
+    @pytest.mark.parametrize(
+        "password,expected",
+        [
+            ("ShortPass1", False),
+            ("weakpass", False),
+            ("NoUpper123", False),
+            ("NoLower123", False),
+            ("NoNumber123", False),
+            ("Valid123", True),
+        ],
+    )
+    def test_validate_password_strength(
+        self, password_hasher, password: str, expected: bool
+    ):
         result = password_hasher.validate_password_strength(password)
-        assert result == expected, f"Invalid password '{password}' failed validation: expected {expected}"
+        assert result == expected, (
+            f"Invalid password '{password}' failed validation: expected {expected}"
+        )
 
     def test_validate_password_strength_no_special(self, password_hasher):
         """Test password strength validation - missing special character"""
@@ -144,6 +153,7 @@ class TestPasswordHashing:
 # ============================================================================
 # Token Generation Tests
 # ============================================================================
+
 
 class TestTokenGeneration:
     """Test token generation functionality"""
@@ -177,10 +187,10 @@ class TestTokenGeneration:
                 "roles": valid_user_data.roles,
                 "type": "access",
                 "exp": datetime.utcnow() + timedelta(minutes=15),
-                "iat": datetime.utcnow()
+                "iat": datetime.utcnow(),
             },
             "test-secret",
-            algorithm="HS256"
+            algorithm="HS256",
         )
 
         # Decode token to verify claims
@@ -213,6 +223,7 @@ class TestTokenGeneration:
 # JWT Handler Tests
 # ============================================================================
 
+
 class TestJWTHandler:
     """Test JWT handler functionality"""
 
@@ -227,7 +238,9 @@ class TestJWTHandler:
         """Test token creation"""
         access_token = "mock_access_token"
         refresh_token = "mock_refresh_token"
-        mock_jwt_handler.create_tokens = Mock(return_value=(access_token, refresh_token))
+        mock_jwt_handler.create_tokens = Mock(
+            return_value=(access_token, refresh_token)
+        )
 
         access, refresh = mock_jwt_handler.create_tokens(valid_user_data)
 
@@ -247,12 +260,14 @@ class TestJWTHandler:
                 "roles": valid_user_data.roles,
                 "type": "access",
                 "exp": datetime.utcnow() + timedelta(minutes=15),
-                "iat": datetime.utcnow()
+                "iat": datetime.utcnow(),
             },
             "test-secret",
-            algorithm="HS256"
+            algorithm="HS256",
         )
-        mock_jwt_handler.validate_token = Mock(return_value=jwt.decode(token, options={"verify_signature": False}))
+        mock_jwt_handler.validate_token = Mock(
+            return_value=jwt.decode(token, options={"verify_signature": False})
+        )
 
         payload = mock_jwt_handler.validate_token(token)
 
@@ -283,6 +298,7 @@ class TestJWTHandler:
 # Authentication Endpoints Tests
 # ============================================================================
 
+
 class TestAuthenticationEndpoints:
     """Test authentication endpoints functionality"""
 
@@ -307,9 +323,7 @@ class TestAuthenticationEndpoints:
         auth_service.register = Mock(return_value=user)
 
         result = await auth_service.register(
-            username="newuser",
-            email="newuser@example.com",
-            password="SecurePass123!"
+            username="newuser", email="newuser@example.com", password="SecurePass123!"
         )
 
         assert result is not None
@@ -328,8 +342,7 @@ class TestAuthenticationEndpoints:
         auth_service.login = Mock(return_value=token_response)
 
         result = await auth_service.login(
-            username="testuser",
-            password="SecurePass123!"
+            username="testuser", password="SecurePass123!"
         )
 
         assert result is not None
@@ -342,10 +355,7 @@ class TestAuthenticationEndpoints:
         auth_service.login = Mock(side_effect=Exception("Invalid credentials"))
 
         with pytest.raises(Exception):
-            await auth_service.login(
-                username="testuser",
-                password="wrongpassword"
-            )
+            await auth_service.login(username="testuser", password="wrongpassword")
 
     @pytest.mark.asyncio
     async def test_refresh_token(self, auth_service):

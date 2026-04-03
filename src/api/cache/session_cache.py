@@ -38,7 +38,9 @@ class SessionCache:
         self.manager = CacheManager(redis_client)
         self.default_ttl = default_ttl
 
-    async def set(self, session_id: str, session_data: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+    async def set(
+        self, session_id: str, session_data: Dict[str, Any], ttl: Optional[int] = None
+    ) -> bool:
         """
         Store session data.
 
@@ -143,4 +145,4 @@ class SessionCache:
         return sessions
 
 
-__all__ = ['SessionCache']
+__all__ = ["SessionCache"]

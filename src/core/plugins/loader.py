@@ -62,7 +62,9 @@ class PluginLoader:
                             plugin_name = metadata["name"]
                             discovered[plugin_name] = plugin_dir
                         except Exception as e:
-                            logger.warning(f"Failed to load metadata from {metadata_file}: {e}")
+                            logger.warning(
+                                f"Failed to load metadata from {metadata_file}: {e}"
+                            )
 
         return discovered
 
@@ -80,7 +82,7 @@ class PluginLoader:
             ValueError: If metadata file is invalid
         """
         try:
-            with open(metadata_file, 'r') as f:
+            with open(metadata_file, "r") as f:
                 data = json.load(f)
 
             # Validate required fields
@@ -133,7 +135,9 @@ class PluginLoader:
             logger.error(f"Failed to load plugin from {plugin_dir}: {e}")
             return None
 
-    def _load_plugin_class(self, plugin_file: Path, metadata: PluginMetadata) -> Optional[Plugin]:
+    def _load_plugin_class(
+        self, plugin_file: Path, metadata: PluginMetadata
+    ) -> Optional[Plugin]:
         """
         Load plugin class from Python file
 
@@ -159,8 +163,8 @@ class PluginLoader:
             spec.loader.exec_module(module)
 
             # Find Plugin class in module
-            if hasattr(module, 'Plugin'):
-                plugin_class = getattr(module, 'Plugin')
+            if hasattr(module, "Plugin"):
+                plugin_class = getattr(module, "Plugin")
                 return plugin_class(metadata)
             else:
                 logger.warning(f"No Plugin class found in {plugin_file}")

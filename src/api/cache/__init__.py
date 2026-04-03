@@ -12,9 +12,4 @@ from .query_cache import QueryCache
 from .session_cache import SessionCache
 from .metrics import CacheMetrics
 
-__all__ = [
-    'CacheManager',
-    'QueryCache',
-    'SessionCache',
-    'CacheMetrics'
-]
+__all__ = ["CacheManager", "QueryCache", "SessionCache", "CacheMetrics"]

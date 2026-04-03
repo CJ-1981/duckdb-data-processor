@@ -8,10 +8,10 @@ This module provides:
 """
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from sqlalchemy import Column, Integer, DateTime
-from sqlalchemy.orm import DeclarativeBase, declared_attr
+from sqlalchemy.orm import DeclarativeBase
 
 
 class BaseModel(DeclarativeBase):
@@ -25,10 +25,7 @@ class BaseModel(DeclarativeBase):
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
-        DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
-        nullable=False
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
 
     # Soft delete
@@ -56,6 +53,6 @@ async def get_async_session() -> Any:
     """Get async database session"""
     # This will be implemented in __init__.py
     # For now, raise NotImplementedError
-    raise NotImplementedError("Database session not configured. Configure in src.api.models.__init__.py")
-
-
+    raise NotImplementedError(
+        "Database session not configured. Configure in src.api.models.__init__.py"
+    )

@@ -14,6 +14,7 @@ from datetime import datetime
 from .base import BaseConnector
 from ..database import DatabaseConnection
 
+
 # @MX:ANCHOR: CSV connector entry point (fan_in >= 3: workflow tasks, import operations, tests)
 # @MX:REASON: Primary data ingestion interface for CSV files
 # @MX:SPEC: SPEC-PLATFORM-001 Module 1: Data Connectors
@@ -39,14 +40,14 @@ class CSVConnector(BaseConnector):
     # Class constants
     DEFAULT_STREAMING_THRESHOLD = 100 * 1024 * 1024  # 100MB
     DEFAULT_CHUNK_SIZE = 10000
-    MISSING_VALUES = ['', 'NULL', 'NA', 'NaN', 'nan', 'None', 'null', 'N/A']
+    MISSING_VALUES = ["", "NULL", "NA", "NaN", "nan", "None", "null", "N/A"]
     PROGRESS_REPORT_INTERVAL = 1000  # Report progress every N rows
 
     def __init__(
         self,
-        delimiter: str = ',',
+        delimiter: str = ",",
         has_header: bool = True,
-        encoding: str = 'utf-8',
+        encoding: str = "utf-8",
         streaming_threshold: int = DEFAULT_STREAMING_THRESHOLD,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
     ):
@@ -144,7 +145,7 @@ class CSVConnector(BaseConnector):
         Returns:
             None if value is a missing value representation, otherwise original value
         """
-        if value in self.MISSING_VALUES or value == '':
+        if value in self.MISSING_VALUES or value == "":
             return None
         return value
 
@@ -163,18 +164,18 @@ class CSVConnector(BaseConnector):
         for v in values:
             if isinstance(v, list):
                 # Handle nested list issue from inconsistent rows
-                return 'VARCHAR'
+                return "VARCHAR"
             if v and str(v).strip() not in self.MISSING_VALUES:
                 non_empty.append(str(v).strip())
 
         if not non_empty:
-            return 'VARCHAR'  # Default for empty columns
+            return "VARCHAR"  # Default for empty columns
 
         # Try INTEGER
         try:
             for v in non_empty:
                 int(v)
-            return 'INTEGER'
+            return "INTEGER"
         except (ValueError, TypeError):
             pass
 
@@ -182,22 +183,34 @@ class CSVConnector(BaseConnector):
         try:
             for v in non_empty:
                 float(v)
-            return 'FLOAT'
+            return "FLOAT"
         except (ValueError, TypeError):
             pass
 
         # Try BOOLEAN
-        boolean_values = {'true', 'false', 'TRUE', 'FALSE', 'True', 'False',
-                         '1', '0', 'yes', 'no', 'YES', 'NO'}
+        boolean_values = {
+            "true",
+            "false",
+            "TRUE",
+            "FALSE",
+            "True",
+            "False",
+            "1",
+            "0",
+            "yes",
+            "no",
+            "YES",
+            "NO",
+        }
         if all(v in boolean_values for v in non_empty):
-            return 'BOOLEAN'
+            return "BOOLEAN"
 
         # Try DATE
         date_formats = [
-            '%Y-%m-%d',
-            '%d/%m/%Y',
-            '%m/%d/%Y',
-            '%Y-%m-%d %H:%M:%S',
+            "%Y-%m-%d",
+            "%d/%m/%Y",
+            "%m/%d/%Y",
+            "%Y-%m-%d %H:%M:%S",
         ]
         is_date = True
         for v in non_empty[:100]:  # Sample first 100 values
@@ -214,10 +227,10 @@ class CSVConnector(BaseConnector):
                 break
 
         if is_date:
-            return 'DATE'
+            return "DATE"
 
         # Default to VARCHAR
-        return 'VARCHAR'
+        return "VARCHAR"
 
     def infer_schema(self, file_path: str) -> Dict[str, str]:
         """
@@ -231,7 +244,7 @@ class CSVConnector(BaseConnector):
         """
         # Read all rows to analyze types
         rows = []
-        with open(file_path, 'r', encoding=self.encoding, newline='') as f:
+        with open(file_path, "r", encoding=self.encoding, newline="") as f:
             reader = csv.DictReader(f, delimiter=self.delimiter)
             try:
                 for row in reader:
@@ -253,7 +266,7 @@ class CSVConnector(BaseConnector):
         # Infer type for each column
         schema = {}
         for col in columns:
-            values = [row.get(col, '') for row in rows]
+            values = [row.get(col, "") for row in rows]
             schema[col] = self._infer_type(values)
 
         return schema
@@ -272,7 +285,7 @@ class CSVConnector(BaseConnector):
         Yields:
             Dictionary representing a row
         """
-        with open(file_path, 'r', encoding=self.encoding, newline='') as f:
+        with open(file_path, "r", encoding=self.encoding, newline="") as f:
             if self.has_header:
                 reader = csv.DictReader(f, delimiter=self.delimiter)
                 for row in reader:
@@ -281,12 +294,12 @@ class CSVConnector(BaseConnector):
                 reader = csv.reader(f, delimiter=self.delimiter)
                 for row in reader:
                     # Generate column names if no header
-                    yield {f'col_{j}': value for j, value in enumerate(row)}
+                    yield {f"col_{j}": value for j, value in enumerate(row)}
 
     def stream_csv(
         self,
         file_path: str,
-        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> Iterator[List[Dict[str, Any]]]:
         """
         Stream large CSV file in chunks
@@ -300,7 +313,7 @@ class CSVConnector(BaseConnector):
         """
         total_rows = 0
 
-        with open(file_path, 'r', encoding=self.encoding, newline='') as f:
+        with open(file_path, "r", encoding=self.encoding, newline="") as f:
             if self.has_header:
                 reader = csv.DictReader(f, delimiter=self.delimiter)
             else:
@@ -309,7 +322,7 @@ class CSVConnector(BaseConnector):
             chunk = []
             for row in reader:
                 if not self.has_header:
-                    row = {f'col_{j}': value for j, value in enumerate(row)}
+                    row = {f"col_{j}": value for j, value in enumerate(row)}
 
                 chunk.append(row)
                 total_rows += 1
@@ -320,12 +333,16 @@ class CSVConnector(BaseConnector):
                     # Report progress
                     if progress_callback:
                         file_size = os.path.getsize(file_path)
-                        progress_callback({
-                            'rows_processed': total_rows,
-                            'total_rows': total_rows,  # May not know total upfront
-                            'percentage': min(100.0, (total_rows / self.chunk_size) * 100),
-                            'file_size': file_size,
-                        })
+                        progress_callback(
+                            {
+                                "rows_processed": total_rows,
+                                "total_rows": total_rows,  # May not know total upfront
+                                "percentage": min(
+                                    100.0, (total_rows / self.chunk_size) * 100
+                                ),
+                                "file_size": file_size,
+                            }
+                        )
 
                     chunk = []
 
@@ -388,7 +405,7 @@ class CSVConnector(BaseConnector):
         row_count = 0
         col_count = 0
 
-        with open(file_path, 'r', encoding=self.encoding, newline='') as f:
+        with open(file_path, "r", encoding=self.encoding, newline="") as f:
             if self.has_header:
                 reader = csv.DictReader(f, delimiter=self.delimiter)
                 try:
@@ -426,11 +443,11 @@ class CSVConnector(BaseConnector):
                 col_count = 0
 
         return {
-            'row_count': row_count,
-            'column_count': col_count,
-            'columns': list(columns),
-            'file_size': file_size,
-            'file_size_mb': file_size / (1024 * 1024),
+            "row_count": row_count,
+            "column_count": col_count,
+            "columns": list(columns),
+            "file_size": file_size,
+            "file_size_mb": file_size / (1024 * 1024),
         }
 
     # ========================================================================
@@ -461,21 +478,23 @@ class CSVConnector(BaseConnector):
 
         # Create table with inferred schema
         if schema:
-            columns_def = ', '.join([f'"{col}" {dtype}' for col, dtype in schema.items()])
+            columns_def = ", ".join(
+                [f'"{col}" {dtype}' for col, dtype in schema.items()]
+            )
         else:
             # Fallback: read first row to get columns
             rows = list(self.read_csv(csv_path))
             if rows:
                 columns = rows[0].keys()
-                columns_def = ', '.join([f'"{col}" VARCHAR' for col in columns])
+                columns_def = ", ".join([f'"{col}" VARCHAR' for col in columns])
             else:
                 raise ValueError(f"Unable to determine schema from {csv_path}")
 
         # Drop existing table
-        db_connection.execute(f'DROP TABLE IF EXISTS {table_name}')
+        db_connection.execute(f"DROP TABLE IF EXISTS {table_name}")
 
         # Create table
-        create_sql = f'CREATE TABLE {table_name} ({columns_def})'
+        create_sql = f"CREATE TABLE {table_name} ({columns_def})"
         db_connection.execute(create_sql)
 
         # Import data
@@ -487,7 +506,7 @@ class CSVConnector(BaseConnector):
 
             # First pass: count total rows for accurate progress
             total_rows = 0
-            with open(csv_path, 'r', encoding=self.encoding, newline='') as f:
+            with open(csv_path, "r", encoding=self.encoding, newline="") as f:
                 total_rows = sum(1 for _ in f) - (1 if self.has_header else 0)
 
             for chunk in self.stream_csv(csv_path, progress_callback):
@@ -495,29 +514,42 @@ class CSVConnector(BaseConnector):
                 for row in chunk:
                     columns = list(row.keys())
                     # Convert missing values to None for DuckDB
-                    values = [self._normalize_missing_values(row.get(col)) for col in columns]
-                    placeholders = ', '.join(['?' for _ in values])
-                    cols_str = ', '.join([f'"{col}"' for col in columns])
+                    values = [
+                        self._normalize_missing_values(row.get(col)) for col in columns
+                    ]
+                    placeholders = ", ".join(["?" for _ in values])
+                    cols_str = ", ".join([f'"{col}"' for col in columns])
 
-                    insert_sql = f'INSERT INTO {table_name} ({cols_str}) VALUES ({placeholders})'
+                    insert_sql = (
+                        f"INSERT INTO {table_name} ({cols_str}) VALUES ({placeholders})"
+                    )
                     db_connection.execute(insert_sql, values)
                     rows_imported += 1
 
                     # Report progress
-                    if progress_callback and rows_imported % self.PROGRESS_REPORT_INTERVAL == 0:
-                        progress_callback({
-                            'rows_processed': rows_imported,
-                            'total_rows': total_rows,
-                            'percentage': (rows_imported / total_rows * 100) if total_rows > 0 else 0,
-                        })
+                    if (
+                        progress_callback
+                        and rows_imported % self.PROGRESS_REPORT_INTERVAL == 0
+                    ):
+                        progress_callback(
+                            {
+                                "rows_processed": rows_imported,
+                                "total_rows": total_rows,
+                                "percentage": (rows_imported / total_rows * 100)
+                                if total_rows > 0
+                                else 0,
+                            }
+                        )
 
             # Final progress report
             if progress_callback:
-                progress_callback({
-                    'rows_processed': rows_imported,
-                    'total_rows': total_rows,
-                    'percentage': 100.0,
-                })
+                progress_callback(
+                    {
+                        "rows_processed": rows_imported,
+                        "total_rows": total_rows,
+                        "percentage": 100.0,
+                    }
+                )
         else:
             # Read all at once for small files
             rows = list(self.read_csv(csv_path))
@@ -525,27 +557,33 @@ class CSVConnector(BaseConnector):
             for row in rows:
                 columns = list(row.keys())
                 # Convert missing values to None for DuckDB
-                values = [self._normalize_missing_values(row.get(col)) for col in columns]
-                placeholders = ', '.join(['?' for _ in values])
-                cols_str = ', '.join([f'"{col}"' for col in columns])
+                values = [
+                    self._normalize_missing_values(row.get(col)) for col in columns
+                ]
+                placeholders = ", ".join(["?" for _ in values])
+                cols_str = ", ".join([f'"{col}"' for col in columns])
 
-                insert_sql = f'INSERT INTO {table_name} ({cols_str}) VALUES ({placeholders})'
+                insert_sql = (
+                    f"INSERT INTO {table_name} ({cols_str}) VALUES ({placeholders})"
+                )
                 db_connection.execute(insert_sql, values)
 
             # Report completion
             if progress_callback:
-                progress_callback({
-                    'rows_processed': len(rows),
-                    'total_rows': len(rows),
-                    'percentage': 100.0,
-                })
+                progress_callback(
+                    {
+                        "rows_processed": len(rows),
+                        "total_rows": len(rows),
+                        "percentage": 100.0,
+                    }
+                )
 
     # ========================================================================
     #  Configuration
     # =========================================================================
 
     @classmethod
-    def from_config(cls, config: Any) -> 'CSVConnector':
+    def from_config(cls, config: Any) -> "CSVConnector":
         """
         Create CSV connector from configuration object
 
@@ -558,9 +596,11 @@ class CSVConnector(BaseConnector):
         csv_config = config.connectors.csv
 
         return cls(
-            delimiter=getattr(csv_config, 'delimiter', ','),
-            has_header=getattr(csv_config, 'has_header', True),
-            encoding=getattr(csv_config, 'encoding', 'utf-8'),
-            streaming_threshold=getattr(csv_config, 'streaming_threshold', cls.DEFAULT_STREAMING_THRESHOLD),
-            chunk_size=getattr(csv_config, 'chunk_size', cls.DEFAULT_CHUNK_SIZE),
+            delimiter=getattr(csv_config, "delimiter", ","),
+            has_header=getattr(csv_config, "has_header", True),
+            encoding=getattr(csv_config, "encoding", "utf-8"),
+            streaming_threshold=getattr(
+                csv_config, "streaming_threshold", cls.DEFAULT_STREAMING_THRESHOLD
+            ),
+            chunk_size=getattr(csv_config, "chunk_size", cls.DEFAULT_CHUNK_SIZE),
         )

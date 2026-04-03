@@ -10,14 +10,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.core.config.loader import Config
 from src.api.dependencies import get_processor, get_config
 from src.api.middleware import (
     RequestIDMiddleware,
     LoggingMiddleware,
-    ErrorHandlerMiddleware
+    ErrorHandlerMiddleware,
 )
 from src.api.routes.system import router as health_router
 from src.api.routes.users import router as users_router
@@ -63,7 +61,7 @@ def create_app() -> FastAPI:
         description="Full-stack data analysis platform powered by DuckDB",
         docs_url="/docs",
         redoc_url="/redoc",
-        lifespan=lifespan
+        lifespan=lifespan,
     )
 
     # Load configuration
@@ -93,11 +91,11 @@ def create_app() -> FastAPI:
 
     # Register routers
     # Note: Additional routers will be added in later tasks (auth, jobs, etc.)
-    app.include_router(health_router)    # System configuration endpoints
-    app.include_router(users_router)     # User management endpoints
-    app.include_router(data_router)      # Data processing endpoints
-    app.include_router(workflows_router) # Workflow management endpoints
-    app.include_router(jobs_router)      # Job execution endpoints
+    app.include_router(health_router)  # System configuration endpoints
+    app.include_router(users_router)  # User management endpoints
+    app.include_router(data_router)  # Data processing endpoints
+    app.include_router(workflows_router)  # Workflow management endpoints
+    app.include_router(jobs_router)  # Job execution endpoints
 
     # Root endpoints
     @app.get("/")
@@ -106,7 +104,7 @@ def create_app() -> FastAPI:
         return {
             "message": "DuckDB Data Processor API",
             "version": "1.0.0",
-            "documentation": "/docs"
+            "documentation": "/docs",
         }
 
     @app.get("/health")

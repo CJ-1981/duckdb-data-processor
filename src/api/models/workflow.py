@@ -15,9 +15,7 @@ from sqlalchemy.orm import relationship
 from .base import BaseModel
 
 if TYPE_CHECKING:
-    from .user import User
-    from .job import Job
-    from .workflow_version import WorkflowVersion
+    pass
 
 
 class Workflow(BaseModel):
@@ -52,18 +50,18 @@ class Workflow(BaseModel):
         Provides Python-level defaults since SQLAlchemy defaults only apply at DB level.
         """
         # Set defaults BEFORE calling super().__init__
-        if 'is_active' not in kwargs:
-            kwargs['is_active'] = True
-        if 'version' not in kwargs:
-            kwargs['version'] = 1
+        if "is_active" not in kwargs:
+            kwargs["is_active"] = True
+        if "version" not in kwargs:
+            kwargs["version"] = 1
 
         # Call parent init
         super().__init__(**kwargs)
 
         # Post-init validation - CRITICAL: Set AFTER SQLAlchemy processes attributes
-        if getattr(self, 'is_active', None) is None:
+        if getattr(self, "is_active", None) is None:
             self.is_active = True
-        if getattr(self, 'version', None) is None:
+        if getattr(self, "version", None) is None:
             self.version = 1
 
     def __repr__(self) -> str:

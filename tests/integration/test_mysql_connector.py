@@ -7,15 +7,16 @@ If MySQL is not available, these tests will be skipped.
 
 import pytest
 from unittest.mock import patch, MagicMock
-from typing import Optional
 
 # Try to import MySQL dependencies
 try:
     import pymysql
+
     PYMYSQL_AVAILABLE = True
 except ImportError:
     try:
         import mysql.connector
+
         MYSQL_CONNECTOR_AVAILABLE = True
         PYMYSQL_AVAILABLE = False
     except ImportError:
@@ -23,23 +24,23 @@ except ImportError:
         MYSQL_CONNECTOR_AVAILABLE = False
 
 from src.core.connectors.mysql import MySQLConnector
-from src.core.connectors.database import DatabaseConnector
 
 
 # ========================================================================
 # Integration Test Configuration
 # ========================================================================
 
+
 @pytest.fixture(scope="module")
 def mysql_config():
     """MySQL connection configuration for integration tests"""
     return {
-        'host': 'localhost',
-        'port': 3306,
-        'database': 'test_db',
-        'user': 'test_user',
-        'password': 'test_password',
-        'charset': 'utf8mb4',
+        "host": "localhost",
+        "port": 3306,
+        "database": "test_db",
+        "user": "test_user",
+        "password": "test_password",
+        "charset": "utf8mb4",
     }
 
 
@@ -109,6 +110,7 @@ def test_table_setup(mysql_config, skip_if_no_mysql):
 # Integration Tests (Real MySQL)
 # ========================================================================
 
+
 class TestMySQLConnectorRealConnection:
     """Integration tests with real MySQL database"""
 
@@ -130,7 +132,7 @@ class TestMySQLConnectorRealConnection:
 
         tables = connector.list_tables()
 
-        assert 'test_users' in tables
+        assert "test_users" in tables
         assert len(tables) >= 1
 
         connector.disconnect()
@@ -142,14 +144,14 @@ class TestMySQLConnectorRealConnection:
         connector = MySQLConnector(**mysql_config)
         connector.connect()
 
-        schema = connector.get_table_schema('test_users')
+        schema = connector.get_table_schema("test_users")
 
         assert len(schema) == 6  # 6 columns
 
         # Check specific column
-        id_column = next(col for col in schema if col['name'] == 'id')
-        assert 'INT' in id_column['type']
-        assert id_column['nullable'] is False
+        id_column = next(col for col in schema if col["name"] == "id")
+        assert "INT" in id_column["type"]
+        assert id_column["nullable"] is False
 
         connector.disconnect()
 
@@ -163,9 +165,9 @@ class TestMySQLConnectorRealConnection:
         results = connector.execute_select("SELECT * FROM test_users ORDER BY name")
 
         assert len(results) == 3
-        assert results[0][1] == 'Alice'  # name column
-        assert results[1][1] == 'Bob'
-        assert results[2][1] == 'Charlie'
+        assert results[0][1] == "Alice"  # name column
+        assert results[1][1] == "Bob"
+        assert results[2][1] == "Charlie"
 
         connector.disconnect()
 
@@ -178,18 +180,17 @@ class TestMySQLConnectorRealConnection:
 
         affected = connector.execute_insert(
             "INSERT INTO test_users (name, email, age) VALUES (%s, %s, %s)",
-            params=['David', 'david@example.com', 28]
+            params=["David", "david@example.com", 28],
         )
 
         assert affected == 1
 
         # Verify insert
         results = connector.execute_select(
-            "SELECT * FROM test_users WHERE email = %s",
-            params=['david@example.com']
+            "SELECT * FROM test_users WHERE email = %s", params=["david@example.com"]
         )
         assert len(results) == 1
-        assert results[0][1] == 'David'
+        assert results[0][1] == "David"
 
         connector.disconnect()
 
@@ -201,16 +202,14 @@ class TestMySQLConnectorRealConnection:
         connector.connect()
 
         affected = connector.execute_update(
-            "UPDATE test_users SET age = %s WHERE name = %s",
-            params=[31, 'Alice']
+            "UPDATE test_users SET age = %s WHERE name = %s", params=[31, "Alice"]
         )
 
         assert affected == 1
 
         # Verify update
         results = connector.execute_select(
-            "SELECT age FROM test_users WHERE name = %s",
-            params=['Alice']
+            "SELECT age FROM test_users WHERE name = %s", params=["Alice"]
         )
         assert results[0][0] == 31
 
@@ -224,16 +223,14 @@ class TestMySQLConnectorRealConnection:
         connector.connect()
 
         affected = connector.execute_delete(
-            "DELETE FROM test_users WHERE name = %s",
-            params=['Bob']
+            "DELETE FROM test_users WHERE name = %s", params=["Bob"]
         )
 
         assert affected == 1
 
         # Verify delete
         results = connector.execute_select(
-            "SELECT * FROM test_users WHERE name = %s",
-            params=['Bob']
+            "SELECT * FROM test_users WHERE name = %s", params=["Bob"]
         )
         assert len(results) == 0
 
@@ -252,7 +249,7 @@ class TestMySQLConnectorRealConnection:
         # Insert record
         connector.execute_insert(
             "INSERT INTO test_users (name, email, age) VALUES (%s, %s, %s)",
-            params=['Eve', 'eve@example.com', 27]
+            params=["Eve", "eve@example.com", 27],
         )
 
         # Commit transaction
@@ -260,8 +257,7 @@ class TestMySQLConnectorRealConnection:
 
         # Verify record exists
         results = connector.execute_select(
-            "SELECT * FROM test_users WHERE email = %s",
-            params=['eve@example.com']
+            "SELECT * FROM test_users WHERE email = %s", params=["eve@example.com"]
         )
         assert len(results) == 1
 
@@ -283,7 +279,7 @@ class TestMySQLConnectorRealConnection:
         # Insert record
         connector.execute_insert(
             "INSERT INTO test_users (name, email, age) VALUES (%s, %s, %s)",
-            params=['Frank', 'frank@example.com', 40]
+            params=["Frank", "frank@example.com", 40],
         )
 
         # Rollback transaction
@@ -303,13 +299,15 @@ class TestMySQLConnectorRealConnection:
         connector.connect()
 
         results = []
-        for row in connector.execute_query_stream("SELECT * FROM test_users ORDER BY name"):
+        for row in connector.execute_query_stream(
+            "SELECT * FROM test_users ORDER BY name"
+        ):
             results.append(row)
             if len(results) >= 2:  # Just test first 2 rows
                 break
 
         assert len(results) == 2
-        assert results[0][1] == 'Alice'
+        assert results[0][1] == "Alice"
 
         connector.disconnect()
 
@@ -323,9 +321,9 @@ class TestMySQLConnectorRealConnection:
         pks = connector.get_primary_keys()
 
         # Check test_users table
-        test_users_pk = [pk for pk in pks if pk[0] == 'test_users']
+        test_users_pk = [pk for pk in pks if pk[0] == "test_users"]
         assert len(test_users_pk) == 1
-        assert test_users_pk[0][1] == 'id'
+        assert test_users_pk[0][1] == "id"
 
         connector.disconnect()
 
@@ -353,10 +351,10 @@ class TestMySQLConnectorRealConnection:
         fks = connector.get_foreign_keys()
 
         # Check test_orders foreign key
-        test_orders_fk = [fk for fk in fks if fk['from_table'] == 'test_orders']
+        test_orders_fk = [fk for fk in fks if fk["from_table"] == "test_orders"]
         assert len(test_orders_fk) >= 1
-        assert test_orders_fk[0]['to_table'] == 'test_users'
-        assert test_orders_fk[0]['to_column'] == 'id'
+        assert test_orders_fk[0]["to_table"] == "test_users"
+        assert test_orders_fk[0]["to_column"] == "id"
 
         connector.disconnect()
 
@@ -365,10 +363,11 @@ class TestMySQLConnectorRealConnection:
 # Mock Integration Tests (No MySQL Required)
 # ========================================================================
 
+
 class TestMySQLConnectorMockIntegration:
     """Integration tests using mocks (no MySQL required)"""
 
-    @patch('src.core.connectors.mysql.pymysql')
+    @patch("src.core.connectors.mysql.pymysql")
     def test_full_workflow_with_mocks(self, mock_pymysql):
         """Test complete workflow using mocked MySQL"""
         # Setup mocks
@@ -380,19 +379,19 @@ class TestMySQLConnectorMockIntegration:
 
         # Mock query results
         mock_cursor.fetchall.side_effect = [
-            [('test_users',), ('test_orders',)],  # list_tables
-            [('id', 'INT'), ('name', 'VARCHAR')],  # get_table_schema
-            [(1, 'Alice'), (2, 'Bob')],  # execute_select
+            [("test_users",), ("test_orders",)],  # list_tables
+            [("id", "INT"), ("name", "VARCHAR")],  # get_table_schema
+            [(1, "Alice"), (2, "Bob")],  # execute_select
         ]
         mock_cursor.rowcount = 1  # Affected rows for INSERT/UPDATE/DELETE
 
         # Connect
         connector = MySQLConnector(
-            host='localhost',
+            host="localhost",
             port=3306,
-            database='testdb',
-            user='testuser',
-            password='testpass'
+            database="testdb",
+            user="testuser",
+            password="testpass",
         )
         connector.connect()
 
@@ -400,10 +399,10 @@ class TestMySQLConnectorMockIntegration:
 
         # List tables
         tables = connector.list_tables()
-        assert 'test_users' in tables
+        assert "test_users" in tables
 
         # Get schema
-        schema = connector.get_table_schema('test_users')
+        schema = connector.get_table_schema("test_users")
         assert len(schema) == 2
 
         # Execute SELECT
@@ -412,8 +411,7 @@ class TestMySQLConnectorMockIntegration:
 
         # Execute INSERT
         affected = connector.execute_insert(
-            "INSERT INTO test_users (name) VALUES (%s)",
-            params=['Eve']
+            "INSERT INTO test_users (name) VALUES (%s)", params=["Eve"]
         )
         assert affected == 1
 
@@ -421,18 +419,18 @@ class TestMySQLConnectorMockIntegration:
         connector.disconnect()
         assert connector.connected is False
 
-    @patch('src.core.connectors.mysql.pymysql')
+    @patch("src.core.connectors.mysql.pymysql")
     def test_error_handling_with_mocks(self, mock_pymysql):
         """Test error handling using mocked MySQL"""
         # Setup mock to raise exception
         mock_pymysql.connect.side_effect = Exception("Connection failed")
 
         connector = MySQLConnector(
-            host='localhost',
+            host="localhost",
             port=3306,
-            database='testdb',
-            user='testuser',
-            password='testpass'
+            database="testdb",
+            user="testuser",
+            password="testpass",
         )
 
         with pytest.raises(Exception, match="Connection failed"):
@@ -440,7 +438,7 @@ class TestMySQLConnectorMockIntegration:
 
         assert connector.connected is False
 
-    @patch('src.core.connectors.mysql.pymysql')
+    @patch("src.core.connectors.mysql.pymysql")
     def test_connection_pooling_integration(self, mock_pymysql):
         """Test integration with connection pooling"""
         from src.core.database.pool import ConnectionPool
@@ -455,11 +453,11 @@ class TestMySQLConnectorMockIntegration:
         # Acquire connection from pool
         connector = MySQLConnector(
             connection_pool=pool,
-            host='localhost',
+            host="localhost",
             port=3306,
-            database='testdb',
-            user='testuser',
-            password='testpass'
+            database="testdb",
+            user="testuser",
+            password="testpass",
         )
         connector.connect()
 

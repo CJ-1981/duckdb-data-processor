@@ -7,18 +7,14 @@ for datasets exceeding 512MB.
 
 import pytest
 import os
-import tempfile
 import time
 import psutil
-from typing import List, Dict, Any
 from unittest.mock import Mock, patch
-from pathlib import Path
 
 # These imports will fail until GREEN phase implementation
 pytest.importorskip("src.core.processor.streaming")
 
 from src.core.processor.streaming import StreamProcessor, StreamingState
-from src.core.processor.progress import ProgressTracker
 from src.core.database import DatabaseConnection
 
 
@@ -65,7 +61,9 @@ class TestMemoryManagement:
 
             # Memory should stay under limit (with some buffer for overhead)
             # 512MB limit in bytes
-            assert current_memory < 512 * 1024 * 1024 * 1.1, f"Memory exceeded limit: {current_memory} > {512 * 1024 * 1024}"
+            assert current_memory < 512 * 1024 * 1024 * 1.1, (
+                f"Memory exceeded limit: {current_memory} > {512 * 1024 * 1024}"
+            )
 
         # Verify we processed chunks
         assert chunks_processed > 0
@@ -76,17 +74,22 @@ class TestMemoryManagement:
 
         memory_samples = []
 
-        for i, chunk in enumerate(memory_limited_processor.stream_query("SELECT * FROM test")):
+        for i, chunk in enumerate(
+            memory_limited_processor.stream_query("SELECT * FROM test")
+        ):
             memory_samples.append(process.memory_info().rss)
 
         # Memory should not continuously grow
         # (allowing for some variance but should generally stay bounded)
         if len(memory_samples) > 1:
-            max_growth = max(memory_samples[i] - memory_samples[i-1]
-                           for i in range(1, len(memory_samples)))
+            max_growth = max(
+                memory_samples[i] - memory_samples[i - 1]
+                for i in range(1, len(memory_samples))
+            )
             # Growth should be controlled (not more than 10MB growth between chunks)
-            assert max_growth < 10 * 1024 * 1024, \
+            assert max_growth < 10 * 1024 * 1024, (
                 f"Uncontrolled memory growth: {max_growth} bytes"
+            )
 
     def test_chunk_size_auto_adjustment(self, mock_db_large_dataset):
         """Test that chunk size is automatically adjusted when memory limit approached"""
@@ -100,15 +103,16 @@ class TestMemoryManagement:
         initial_chunk_size = processor.chunk_size
 
         # Simulate streaming with memory pressure
-        with patch.object(processor, '_get_current_memory_mb') as mock_memory:
+        with patch.object(processor, "_get_current_memory_mb") as mock_memory:
             # First call returns high memory, triggering adjustment
             mock_memory.side_effect = [500, 400, 300, 200] + [100] * 100
 
             chunks = list(processor.stream_query("SELECT * FROM large_table"))
 
             # Chunk size should have been adjusted
-            assert processor.chunk_size <= initial_chunk_size, \
+            assert processor.chunk_size <= initial_chunk_size, (
                 "Chunk size should be reduced when memory limit approached"
+            )
 
     def test_memory_limit_enforcement_stops_streaming(self, mock_db_large_dataset):
         """Test that streaming stops when memory limit is exceeded"""
@@ -118,7 +122,7 @@ class TestMemoryManagement:
             chunk_size=10000,
         )
 
-        with patch.object(processor, '_get_current_memory_mb') as mock_memory:
+        with patch.object(processor, "_get_current_memory_mb") as mock_memory:
             # Return memory that exceeds limit
             mock_memory.return_value = 150  # Exceeds 100MB limit
 
@@ -152,8 +156,7 @@ class TestStreamingPerformance:
             for i in range(batch_start, min(batch_start + batch_size, 100000)):
                 params_list.append([i, f"val_{i}", i * 1.5, f"data_{i}"])
             db.execute_batch(
-                "INSERT INTO performance_test VALUES (?, ?, ?, ?)",
-                params_list
+                "INSERT INTO performance_test VALUES (?, ?, ?, ?)", params_list
             )
 
         yield db
@@ -177,8 +180,9 @@ class TestStreamingPerformance:
         rows_per_second = total_rows / elapsed
 
         # Should process at least 10,000 rows per second
-        assert rows_per_second >= 10000, \
+        assert rows_per_second >= 10000, (
             f"Throughput too low: {rows_per_second} rows/sec (minimum: 10000)"
+        )
 
         # All rows should be processed
         assert total_rows == 100000
@@ -194,14 +198,17 @@ class TestStreamingPerformance:
         start_time = time.time()
         first_chunk_time = None
 
-        for i, chunk in enumerate(processor.stream_query("SELECT * FROM performance_test")):
+        for i, chunk in enumerate(
+            processor.stream_query("SELECT * FROM performance_test")
+        ):
             if i == 0:
                 first_chunk_time = time.time() - start_time
                 break
 
         # First chunk should arrive within 1 second
-        assert first_chunk_time < 1.0, \
+        assert first_chunk_time < 1.0, (
             f"First chunk latency too high: {first_chunk_time}s (max: 1.0s)"
+        )
 
     @pytest.mark.slow
     def test_progress_tracking_overhead(self, real_db_for_performance):
@@ -230,8 +237,9 @@ class TestStreamingPerformance:
 
         # Progress tracking should add less than 20% overhead
         overhead = (time_with_progress - time_without_progress) / time_without_progress
-        assert overhead < 0.2, \
+        assert overhead < 0.2, (
             f"Progress tracking overhead too high: {overhead * 100}% (max: 20%)"
+        )
 
 
 class TestPauseResumePerformance:
@@ -328,8 +336,9 @@ class TestPauseResumePerformance:
         cancel_time = time.time() - start
 
         # Cancel should take less than 100ms
-        assert cancel_time < 0.1, \
+        assert cancel_time < 0.1, (
             f"Cancel too slow: {cancel_time * 1000}ms (max: 100ms)"
+        )
 
 
 class TestConcurrentStreaming:
@@ -375,5 +384,6 @@ class TestConcurrentStreaming:
         # Note: Results depend on thread safety of implementation
         for name, chunks in results.items():
             # Each stream should process at least some data
-            assert len(chunks) > 0 or sum(chunks) > 0, \
+            assert len(chunks) > 0 or sum(chunks) > 0, (
                 f"Stream {name} processed no data"
+            )

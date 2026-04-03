@@ -9,19 +9,15 @@ All tests should FAIL initially (RED phase) until implementation is complete.
 """
 
 import pytest
-import tempfile
 import threading
 import time
-from pathlib import Path
-from typing import Any, Dict, List
-from unittest.mock import Mock, patch, MagicMock
-import duckdb
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from unittest.mock import Mock
 
 
 # ============================================================================
 # FIXTURES - Mock objects and test data
 # ============================================================================
+
 
 @pytest.fixture
 def temp_db_path(tmp_path):
@@ -62,18 +58,19 @@ def sample_data():
         "users": [
             {"id": 1, "name": "Alice", "email": "alice@example.com"},
             {"id": 2, "name": "Bob", "email": "bob@example.com"},
-            {"id": 3, "name": "Charlie", "email": "charlie@example.com"}
+            {"id": 3, "name": "Charlie", "email": "charlie@example.com"},
         ],
         "products": [
             {"id": 1, "name": "Widget", "price": 9.99},
-            {"id": 2, "name": "Gadget", "price": 19.99}
-        ]
+            {"id": 2, "name": "Gadget", "price": 19.99},
+        ],
     }
 
 
 # ============================================================================
 # TEST CLASS 1: Connection Pool Management (Acceptance Criteria #1)
 # ============================================================================
+
 
 class TestConnectionPool:
     """
@@ -223,6 +220,7 @@ class TestConnectionPool:
 # TEST CLASS 2: Parameterized Query Execution (Acceptance Criteria #2)
 # ============================================================================
 
+
 class TestParameterizedQueries:
     """
     GIVEN a database connection is established
@@ -255,14 +253,11 @@ class TestParameterizedQueries:
         # Insert with parameters
         db.execute(
             "INSERT INTO users VALUES (?, ?, ?)",
-            parameters=[1, "Alice", "alice@example.com"]
+            parameters=[1, "Alice", "alice@example.com"],
         )
 
         # Query with parameters
-        result = db.execute(
-            "SELECT * FROM users WHERE name = ?",
-            parameters=["Alice"]
-        )
+        result = db.execute("SELECT * FROM users WHERE name = ?", parameters=["Alice"])
 
         assert len(result) == 1
         assert result[0]["name"] == "Alice"
@@ -292,14 +287,13 @@ class TestParameterizedQueries:
         # Insert legitimate data
         db.execute(
             "INSERT INTO users VALUES (?, ?, ?)",
-            parameters=[1, "Alice", "alice@example.com"]
+            parameters=[1, "Alice", "alice@example.com"],
         )
 
         # Attempt SQL injection via parameter
         malicious_input = "Robert'); DROP TABLE users; --"
         result = db.execute(
-            "SELECT * FROM users WHERE name = ?",
-            parameters=[malicious_input]
+            "SELECT * FROM users WHERE name = ?", parameters=[malicious_input]
         )
 
         # Should return empty (no match), not drop table
@@ -330,14 +324,12 @@ class TestParameterizedQueries:
 
         # Insert with multiple parameters
         db.execute(
-            "INSERT INTO products VALUES (?, ?, ?)",
-            parameters=[1, "Widget", 9.99]
+            "INSERT INTO products VALUES (?, ?, ?)", parameters=[1, "Widget", 9.99]
         )
 
         # Query with multiple parameters
         result = db.execute(
-            "SELECT * FROM products WHERE id = ? AND price > ?",
-            parameters=[1, 5.00]
+            "SELECT * FROM products WHERE id = ? AND price > ?", parameters=[1, 5.00]
         )
 
         assert len(result) == 1
@@ -354,9 +346,7 @@ class TestParameterizedQueries:
         builder = QueryBuilder()
 
         # Build SELECT query
-        query, params = builder.select("users") \
-            .where("name = ?", ["Alice"]) \
-            .build()
+        query, params = builder.select("users").where("name = ?", ["Alice"]).build()
 
         assert "SELECT * FROM users" in query
         assert "WHERE name = ?" in query
@@ -375,9 +365,9 @@ class TestParameterizedQueries:
         malicious_name = "Robert'; DROP TABLE users; --"
 
         # Build query with malicious input
-        query, params = builder.select("users") \
-            .where("name = ?", [malicious_name]) \
-            .build()
+        query, params = (
+            builder.select("users").where("name = ?", [malicious_name]).build()
+        )
 
         # Malicious input should be in parameters, not query
         assert "DROP TABLE" not in query
@@ -407,13 +397,10 @@ class TestParameterizedQueries:
         data = [
             [1, "Alice", "alice@example.com"],
             [2, "Bob", "bob@example.com"],
-            [3, "Charlie", "charlie@example.com"]
+            [3, "Charlie", "charlie@example.com"],
         ]
 
-        db.execute_batch(
-            "INSERT INTO users VALUES (?, ?, ?)",
-            parameters_list=data
-        )
+        db.execute_batch("INSERT INTO users VALUES (?, ?, ?)", parameters_list=data)
 
         # Verify all rows inserted
         result = db.execute("SELECT * FROM users")
@@ -423,6 +410,7 @@ class TestParameterizedQueries:
 # ============================================================================
 # TEST CLASS 3: Connection Health and Reconnection (Acceptance Criteria #3)
 # ============================================================================
+
 
 class TestConnectionHealth:
     """
@@ -485,10 +473,7 @@ class TestConnectionHealth:
         from src.core.database import DatabaseConnection
 
         db = DatabaseConnection(
-            temp_db_path,
-            auto_reconnect=True,
-            max_retries=3,
-            retry_delay=0.1
+            temp_db_path, auto_reconnect=True, max_retries=3, retry_delay=0.1
         )
 
         # Force close
@@ -508,9 +493,7 @@ class TestConnectionHealth:
         from src.core.database.pool import ConnectionPool
 
         pool = ConnectionPool(
-            max_connections=5,
-            health_check_interval=1.0,
-            max_connection_age=2.0
+            max_connections=5, health_check_interval=1.0, max_connection_age=2.0
         )
 
         # Acquire connection
@@ -546,6 +529,7 @@ class TestConnectionHealth:
 # TEST CLASS 4: Query Timeout Handling (Acceptance Criteria #4)
 # ============================================================================
 
+
 class TestQueryTimeout:
     """
     GIVEN a database connection is established
@@ -563,8 +547,6 @@ class TestQueryTimeout:
         This test verifies the timeout infrastructure exists
         """
         from src.core.database import DatabaseConnection
-        from src.core.database.exceptions import QueryTimeoutError
-        import time
 
         db = DatabaseConnection(temp_db_path, query_timeout=0.1)
 
@@ -615,10 +597,7 @@ class TestQueryTimeout:
         db.execute("CREATE TABLE test (id INTEGER)")
 
         # Execute with custom timeout
-        result = db.execute(
-            "SELECT * FROM test",
-            timeout=5.0
-        )
+        result = db.execute("SELECT * FROM test", timeout=5.0)
 
         assert result is not None
 
@@ -655,6 +634,7 @@ class TestQueryTimeout:
 # TEST CLASS 5: Integration with Config System
 # ============================================================================
 
+
 class TestConfigIntegration:
     """
     GIVEN a configuration system exists
@@ -689,15 +669,15 @@ class TestConfigIntegration:
         # Create config file with proper YAML structure
         config_file = tmp_path / "config.yaml"
         config_data = {
-            'database': {
-                'path': ':memory:',
-                'max_connections': 10,
-                'connection_timeout': 30.0,
-                'query_timeout': 60.0
+            "database": {
+                "path": ":memory:",
+                "max_connections": 10,
+                "connection_timeout": 30.0,
+                "query_timeout": 60.0,
             }
         }
 
-        with open(config_file, 'w') as f:
+        with open(config_file, "w") as f:
             yaml.dump(config_data, f)
 
         config = Config(config_file).load()
@@ -719,15 +699,15 @@ class TestConfigIntegration:
         # Create config file
         config_file = tmp_path / "config.yaml"
         config_data = {
-            'database': {
-                'path': ':memory:',
-                'max_connections': 5,
-                'connection_timeout': 30.0,
-                'query_timeout': 60.0
+            "database": {
+                "path": ":memory:",
+                "max_connections": 5,
+                "connection_timeout": 30.0,
+                "query_timeout": 60.0,
             }
         }
 
-        with open(config_file, 'w') as f:
+        with open(config_file, "w") as f:
             yaml.dump(config_data, f)
 
         config = Config(config_file).load()
@@ -743,6 +723,7 @@ class TestConfigIntegration:
 # ============================================================================
 # TEST CLASS 6: Query Builder
 # ============================================================================
+
 
 class TestQueryBuilder:
     """
@@ -760,9 +741,7 @@ class TestQueryBuilder:
         from src.core.database.query import QueryBuilder
 
         builder = QueryBuilder()
-        query, params = builder.select("users") \
-            .where("id = ?", [1]) \
-            .build()
+        query, params = builder.select("users").where("id = ?", [1]).build()
 
         assert "SELECT * FROM users" in query
         assert "WHERE id = ?" in query
@@ -777,9 +756,11 @@ class TestQueryBuilder:
         from src.core.database.query import QueryBuilder
 
         builder = QueryBuilder()
-        query, params = builder.insert("users") \
-            .values(["name", "email"], ["Alice", "alice@example.com"]) \
+        query, params = (
+            builder.insert("users")
+            .values(["name", "email"], ["Alice", "alice@example.com"])
             .build()
+        )
 
         assert "INSERT INTO users" in query
         assert "VALUES (?, ?)" in query
@@ -794,10 +775,12 @@ class TestQueryBuilder:
         from src.core.database.query import QueryBuilder
 
         builder = QueryBuilder()
-        query, params = builder.update("users") \
-            .set({"name": "Alice", "email": "alice@example.com"}) \
-            .where("id = ?", [1]) \
+        query, params = (
+            builder.update("users")
+            .set({"name": "Alice", "email": "alice@example.com"})
+            .where("id = ?", [1])
             .build()
+        )
 
         assert "UPDATE users" in query
         assert "SET name = ?, email = ?" in query
@@ -813,9 +796,7 @@ class TestQueryBuilder:
         from src.core.database.query import QueryBuilder
 
         builder = QueryBuilder()
-        query, params = builder.delete("users") \
-            .where("id = ?", [1]) \
-            .build()
+        query, params = builder.delete("users").where("id = ?", [1]).build()
 
         assert "DELETE FROM users" in query
         assert "WHERE id = ?" in query
@@ -830,11 +811,13 @@ class TestQueryBuilder:
         from src.core.database.query import QueryBuilder
 
         builder = QueryBuilder()
-        query, params = builder.select("users") \
-            .where("age >= ?", [18]) \
-            .and_where("status = ?", ["active"]) \
-            .or_where("is_admin = ?", [True]) \
+        query, params = (
+            builder.select("users")
+            .where("age >= ?", [18])
+            .and_where("status = ?", ["active"])
+            .or_where("is_admin = ?", [True])
             .build()
+        )
 
         assert "WHERE age >= ?" in query
         assert "AND status = ?" in query
@@ -850,10 +833,9 @@ class TestQueryBuilder:
         from src.core.database.query import QueryBuilder
 
         builder = QueryBuilder()
-        query, params = builder.select("users") \
-            .order_by("name", "ASC") \
-            .limit(10) \
-            .build()
+        query, params = (
+            builder.select("users").order_by("name", "ASC").limit(10).build()
+        )
 
         assert "ORDER BY name ASC" in query
         assert "LIMIT 10" in query
@@ -867,10 +849,12 @@ class TestQueryBuilder:
         from src.core.database.query import QueryBuilder
 
         builder = QueryBuilder()
-        query, params = builder.select("users") \
-            .join("orders", "users.id = orders.user_id") \
-            .where("orders.total > ?", [100]) \
+        query, params = (
+            builder.select("users")
+            .join("orders", "users.id = orders.user_id")
+            .where("orders.total > ?", [100])
             .build()
+        )
 
         assert "SELECT * FROM users" in query
         assert "JOIN orders ON users.id = orders.user_id" in query
@@ -880,6 +864,7 @@ class TestQueryBuilder:
 # ============================================================================
 # TEST CLASS 7: Result Streaming
 # ============================================================================
+
 
 class TestResultStreaming:
     """
@@ -908,10 +893,7 @@ class TestResultStreaming:
 
         # Insert large dataset
         data = [[i, f"value_{i}"] for i in range(1000)]
-        db.execute_batch(
-            "INSERT INTO large_data VALUES (?, ?)",
-            parameters_list=data
-        )
+        db.execute_batch("INSERT INTO large_data VALUES (?, ?)", parameters_list=data)
 
         # Stream results
         chunk_size = 100
@@ -949,6 +931,7 @@ class TestResultStreaming:
 # ============================================================================
 # TEST CLASS 8: Thread Safety
 # ============================================================================
+
 
 class TestThreadSafety:
     """
@@ -1021,7 +1004,7 @@ class TestThreadSafety:
                 for i in range(10):
                     db.execute(
                         "INSERT INTO test VALUES (?, ?)",
-                        parameters=[thread_id * 10 + i, f"value_{thread_id}_{i}"]
+                        parameters=[thread_id * 10 + i, f"value_{thread_id}_{i}"],
                     )
             except Exception as e:
                 errors.append(e)

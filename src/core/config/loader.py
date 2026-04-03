@@ -11,11 +11,11 @@ import time
 import yaml
 from pathlib import Path
 from typing import Any, Dict, Optional, Callable, List, Union
-from pydantic import ValidationError
 
 try:
     from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
+
     WATCHDOG_AVAILABLE = True
 except ImportError:
     Observer = None
@@ -71,7 +71,12 @@ class Config:
     _watcher_thread = None
     _watcher_running = False
 
-    def __init__(self, config_path: Union[str, Path, List[Union[str, Path]]], env_prefix: str = "APP", hot_reload: bool = True):
+    def __init__(
+        self,
+        config_path: Union[str, Path, List[Union[str, Path]]],
+        env_prefix: str = "APP",
+        hot_reload: bool = True,
+    ):
         """
         Initialize configuration manager
 
@@ -87,7 +92,7 @@ class Config:
             self._config_path = Path(config_path)
             self._config_paths = [self._config_path]
         # Normalize env_prefix to ensure it ends with underscore
-        self._env_prefix = env_prefix if env_prefix.endswith('_') else f'{env_prefix}_'
+        self._env_prefix = env_prefix if env_prefix.endswith("_") else f"{env_prefix}_"
         self._schema: Optional[ConfigSchema] = None
         self._raw_data: Dict[str, Any] = {}
         self._observers: List[Callable[[], None]] = []
@@ -96,11 +101,11 @@ class Config:
         self._watcher_thread: Optional[threading.Thread] = None
 
     @classmethod
-    def get_instance(cls) -> 'Config':
+    def get_instance(cls) -> "Config":
         """Get singleton instance (not used in this implementation)"""
         raise NotImplementedError("Use direct instantiation instead")
 
-    def load(self) -> 'Config':
+    def load(self) -> "Config":
         """
         Load configuration from YAML file(s)
 
@@ -117,13 +122,15 @@ class Config:
             # Check all files exist
             for config_path in self._config_paths:
                 if not config_path.exists():
-                    raise FileNotFoundError(f"Configuration file not found: {config_path}")
+                    raise FileNotFoundError(
+                        f"Configuration file not found: {config_path}"
+                    )
 
             # Load and merge YAML files (later files override earlier ones)
             self._raw_data = {}
             for config_path in self._config_paths:
                 try:
-                    with open(config_path, 'r') as f:
+                    with open(config_path, "r") as f:
                         data = yaml.safe_load(f)
                         if data is None:
                             raise ValueError(f"Empty configuration file: {config_path}")
@@ -168,26 +175,30 @@ class Config:
         for key, value in os.environ.items():
             if key.startswith(self._env_prefix):
                 # Remove prefix (already includes underscore)
-                config_key = key[len(self._env_prefix):].lower()
+                config_key = key[len(self._env_prefix) :].lower()
 
                 # Split into parts by underscore
-                parts = config_key.split('_')
+                parts = config_key.split("_")
 
                 # Try to find the best split point for section.field
                 # Known top-level sections
-                known_sections = {'database', 'redis', 'logging', 'plugins'}
+                known_sections = {"database", "redis", "logging", "plugins"}
 
                 if parts and parts[0] in known_sections:
                     section = parts[0]
-                    remaining = '_'.join(parts[1:])  # Preserve underscores in field name
-                    config_key = f'{section}.{remaining}'
+                    remaining = "_".join(
+                        parts[1:]
+                    )  # Preserve underscores in field name
+                    config_key = f"{section}.{remaining}"
                 else:
                     # Fallback: convert all underscores to dots
-                    config_key = config_key.replace('_', '.')
+                    config_key = config_key.replace("_", ".")
 
                 # Support dot notation for nested keys
-                keys = config_key.split('.')
-                self._set_nested_value(self._raw_data, keys, self._convert_env_value(value))
+                keys = config_key.split(".")
+                self._set_nested_value(
+                    self._raw_data, keys, self._convert_env_value(value)
+                )
 
     def _set_nested_value(self, data: Dict[str, Any], keys: List[str], value: Any):
         """
@@ -221,8 +232,8 @@ class Config:
             Converted value (int, float, bool, list, dict, or str)
         """
         # Try boolean
-        if value.lower() in ('true', 'false'):
-            return value.lower() == 'true'
+        if value.lower() in ("true", "false"):
+            return value.lower() == "true"
 
         # Try integer
         try:
@@ -237,12 +248,13 @@ class Config:
             pass
 
         # Try list (comma-separated)
-        if ',' in value:
-            return [item.strip() for item in value.split(',')]
+        if "," in value:
+            return [item.strip() for item in value.split(",")]
 
         # Try dict (JSON-like)
-        if value.startswith('{') and value.endswith('}'):
+        if value.startswith("{") and value.endswith("}"):
             import json
+
             try:
                 return json.loads(value)
             except json.JSONDecodeError:
@@ -266,7 +278,7 @@ class Config:
             if self._schema is None:
                 self.load()
 
-            keys = key.split('.')
+            keys = key.split(".")
             value = self._schema
             for k in keys:
                 if hasattr(value, k):
@@ -275,7 +287,7 @@ class Config:
                     return default
             return value
 
-    def get_config(self) -> 'Config':
+    def get_config(self) -> "Config":
         """
         Get the current configuration object
 
@@ -314,7 +326,7 @@ class Config:
             if hasattr(self._schema, key):
                 value = getattr(self._schema, key)
                 # Convert Pydantic models to dict for nested access
-                if hasattr(value, 'model_dump'):
+                if hasattr(value, "model_dump"):
                     return value.model_dump()
                 return value
             raise KeyError(key)
@@ -333,12 +345,14 @@ class Config:
         Allows config.database.host style access
         """
         # Only proxy if schema is loaded
-        if '_schema' in self.__dict__ and self.__dict__['_schema'] is not None:
-            schema = self.__dict__['_schema']
+        if "_schema" in self.__dict__ and self.__dict__["_schema"] is not None:
+            schema = self.__dict__["_schema"]
             if hasattr(schema, name):
                 return getattr(schema, name)
         # Raise AttributeError if not found
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        raise AttributeError(
+            f"'{type(self).__name__}' object has no attribute '{name}'"
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -351,7 +365,7 @@ class Config:
             if self._schema is None:
                 self.load()
             # Use mode='json' to serialize enums as values
-            return self._schema.model_dump(mode='json')
+            return self._schema.model_dump(mode="json")
 
     def export_to_yaml(self, path: Optional[Union[str, Path]] = None) -> str:
         """
@@ -368,9 +382,7 @@ class Config:
                 self.load()
 
             yaml_str = yaml.dump(
-                self.to_dict(),
-                default_flow_style=False,
-                sort_keys=False
+                self.to_dict(), default_flow_style=False, sort_keys=False
             )
 
             if path:
@@ -419,7 +431,7 @@ class Config:
                 old_schema = self._schema
                 self.load()
                 self._notify_observers()
-            except Exception as e:
+            except Exception:
                 # Preserve previous configuration on error
                 self._schema = old_schema
                 raise
@@ -448,15 +460,21 @@ class Config:
 
             if WATCHDOG_AVAILABLE:
                 self._observer = Observer()
-                self._observer.schedule(event_handler, path=str(self._config_path.parent))
+                self._observer.schedule(
+                    event_handler, path=str(self._config_path.parent)
+                )
                 self._observer.start()
 
                 # Start watcher thread
-                self._watcher_thread = threading.Thread(target=self._observer.join, daemon=True)
+                self._watcher_thread = threading.Thread(
+                    target=self._observer.join, daemon=True
+                )
                 self._watcher_thread.start()
             else:
                 # Fallback: warn user that hot-reload requires watchdog
-                print("Warning: watchdog package not installed. Hot-reload feature disabled.")
+                print(
+                    "Warning: watchdog package not installed. Hot-reload feature disabled."
+                )
 
     def stop_hot_reload(self):
         """Stop automatic hot-reload"""

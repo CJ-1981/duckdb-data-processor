@@ -13,14 +13,23 @@ Test Structure:
 """
 
 import pytest
-import pytest_asyncio
 from datetime import datetime
-from typing import AsyncGenerator, Optional, Dict, Any, List
+from typing import Dict, Any
 from uuid import uuid4
-from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, JSON, ForeignKey, Enum as SQLEnum
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Boolean,
+    DateTime,
+    JSON,
+    ForeignKey,
+    Enum as SQLEnum,
+)
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase, sessionmaker, relationship
-from pydantic import BaseModel, EmailStr
+from sqlalchemy.orm import DeclarativeBase, relationship
+from pydantic import BaseModel
 from passlib.context import CryptContext
 
 import logging
@@ -36,23 +45,29 @@ TEST_DATABASE_URL_ASYNC = "sqlite+aiosqlite:///:memory:"
 
 # Async engine for tests
 engine = create_async_engine(TEST_DATABASE_URL_ASYNC, echo=False)
-AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+AsyncSessionLocal = async_sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)
 
 
 # Base class for all models
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy models"""
+
     pass
 
 
 # Base model with common fields
 class BaseModel(Base):
     """Base model with common fields and soft delete support"""
+
     __abstract__ = True
 
     id = Column(Integer, primary_key=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
     deleted_at = Column(DateTime, nullable=True)  # Soft delete
 
     def to_dict(self) -> Dict[str, Any]:
@@ -75,6 +90,7 @@ class BaseModel(Base):
 # User model
 class User(BaseModel):
     """User model for authentication and authorization"""
+
     __tablename__ = "users"
 
     username = Column(String(50), unique=True, nullable=False, index=True)
@@ -93,21 +109,21 @@ class User(BaseModel):
         Provides Python-level defaults and validation since SQLAlchemy only validates at DB level.
         """
         # Validate required fields BEFORE calling parent init
-        if 'username' not in kwargs or kwargs.get('username') is None:
+        if "username" not in kwargs or kwargs.get("username") is None:
             raise ValueError("username is required")
-        if 'email' not in kwargs or kwargs.get('email') is None:
+        if "email" not in kwargs or kwargs.get("email") is None:
             raise ValueError("email is required")
-        if 'password_hash' not in kwargs or kwargs.get('password_hash') is None:
+        if "password_hash" not in kwargs or kwargs.get("password_hash") is None:
             raise ValueError("password_hash is required")
 
         # Call parent init
         super().__init__(**kwargs)
 
         # Set defaults AFTER SQLAlchemy initialization
-        if not hasattr(self, 'is_active') or self.is_active is None:
-            object.__setattr__(self, 'is_active', True)
-        if not hasattr(self, 'role') or self.role is None:
-            object.__setattr__(self, 'role', "viewer")
+        if not hasattr(self, "is_active") or self.is_active is None:
+            object.__setattr__(self, "is_active", True)
+        if not hasattr(self, "role") or self.role is None:
+            object.__setattr__(self, "role", "viewer")
 
     def set_password(self, password: str) -> None:
         """Hash and set the user's password"""
@@ -126,9 +142,12 @@ class User(BaseModel):
 # Workflow model
 class Workflow(BaseModel):
     """Workflow model for data processing pipelines"""
+
     __tablename__ = "workflows"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid4()))  # UUID primary key
+    id = Column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )  # UUID primary key
     name = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     definition = Column(JSON, nullable=False)  # DAG definition
@@ -139,26 +158,28 @@ class Workflow(BaseModel):
     # Relationships
     owner = relationship("User", back_populates="workflows", lazy="selectin")
     jobs = relationship("Job", back_populates="workflow", lazy="dynamic")
-    versions = relationship("WorkflowVersion", back_populates="workflow", lazy="dynamic")
+    versions = relationship(
+        "WorkflowVersion", back_populates="workflow", lazy="dynamic"
+    )
 
     def __init__(self, **kwargs):
         """Initialize Workflow with Python-level defaults and validation for non-nullable fields"""
         # Validate required fields BEFORE calling parent init
-        if 'name' not in kwargs or kwargs.get('name') is None:
+        if "name" not in kwargs or kwargs.get("name") is None:
             raise ValueError("name is required")
-        if 'definition' not in kwargs or kwargs.get('definition') is None:
+        if "definition" not in kwargs or kwargs.get("definition") is None:
             raise ValueError("definition is required")
-        if 'owner_id' not in kwargs or kwargs.get('owner_id') is None:
+        if "owner_id" not in kwargs or kwargs.get("owner_id") is None:
             raise ValueError("owner_id is required")
 
         # Call parent init
         super().__init__(**kwargs)
 
         # Set defaults AFTER SQLAlchemy initialization
-        if not hasattr(self, 'is_active') or self.is_active is None:
-            object.__setattr__(self, 'is_active', True)
-        if not hasattr(self, 'version') or self.version is None:
-            object.__setattr__(self, 'version', 1)
+        if not hasattr(self, "is_active") or self.is_active is None:
+            object.__setattr__(self, "is_active", True)
+        if not hasattr(self, "version") or self.version is None:
+            object.__setattr__(self, "version", 1)
 
     def __repr__(self) -> str:
         return f"<Workflow(id={self.id}, name={self.name})>"
@@ -167,10 +188,13 @@ class Workflow(BaseModel):
 # Job model
 class Job(BaseModel):
     """Job model for workflow execution tracking"""
+
     __tablename__ = "jobs"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid4()))
-    workflow_id = Column(String(36), ForeignKey("workflows.id"), nullable=False, index=True)
+    workflow_id = Column(
+        String(36), ForeignKey("workflows.id"), nullable=False, index=True
+    )
     status = Column(String(50), nullable=False, default="pending", index=True)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
@@ -188,10 +212,10 @@ class Job(BaseModel):
         super().__init__(**kwargs)
 
         # Set defaults AFTER SQLAlchemy initialization
-        if not hasattr(self, 'status') or self.status is None:
-            object.__setattr__(self, 'status', "pending")
-        if not hasattr(self, 'progress') or self.progress is None:
-            object.__setattr__(self, 'progress', 0)
+        if not hasattr(self, "status") or self.status is None:
+            object.__setattr__(self, "status", "pending")
+        if not hasattr(self, "progress") or self.progress is None:
+            object.__setattr__(self, "progress", 0)
 
     def __repr__(self) -> str:
         return f"<Job(id={self.id}, status={self.status})>"
@@ -200,9 +224,12 @@ class Job(BaseModel):
 # WorkflowVersion model (for version history)
 class WorkflowVersion(BaseModel):
     """WorkflowVersion model for tracking workflow changes over time"""
+
     __tablename__ = "workflow_versions"
 
-    workflow_id = Column(String(36), ForeignKey("workflows.id"), nullable=False, index=True)
+    workflow_id = Column(
+        String(36), ForeignKey("workflows.id"), nullable=False, index=True
+    )
     version = Column(Integer, nullable=False)
     definition = Column(JSON, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -218,6 +245,7 @@ class WorkflowVersion(BaseModel):
 # Role enum for users
 class UserRole(str, SQLEnum):
     """User role enumeration"""
+
     admin = "admin"
     analyst = "analyst"
     viewer = "viewer"
@@ -226,6 +254,7 @@ class UserRole(str, SQLEnum):
 # Job status enum for jobs
 class JobStatus(str, SQLEnum):
     """Job status enumeration"""
+
     pending = "pending"
     running = "running"
     completed = "completed"
@@ -237,6 +266,7 @@ class JobStatus(str, SQLEnum):
 # Model Creation Tests
 # ============================================================================
 
+
 class TestModelCreation:
     """Test model creation and basic functionality"""
 
@@ -246,7 +276,7 @@ class TestModelCreation:
             username="testuser",
             email="test@example.com",
             password_hash="$2b$12$ab$cd422b$",
-            role="analyst"
+            role="analyst",
         )
 
         assert user.username == "testuser"
@@ -261,7 +291,7 @@ class TestModelCreation:
             name="Test Workflow",
             description="A test workflow",
             definition={"nodes": [], "edges": []},
-            owner_id=1
+            owner_id=1,
         )
 
         assert workflow.name == "Test Workflow"
@@ -273,11 +303,7 @@ class TestModelCreation:
 
     def test_job_creation(self):
         """Test creating a job instance"""
-        job = Job(
-            workflow_id="workflow-uuid",
-            status="pending",
-            created_by=1
-        )
+        job = Job(workflow_id="workflow-uuid", status="pending", created_by=1)
 
         assert job.workflow_id == "workflow-uuid"
         assert job.status == "pending"
@@ -290,7 +316,7 @@ class TestModelCreation:
             workflow_id="workflow-uuid",
             version=2,
             definition={"nodes": [], "edges": []},
-            created_by=1
+            created_by=1,
         )
 
         assert version.workflow_id == "workflow-uuid"
@@ -302,17 +328,16 @@ class TestModelCreation:
 # Password Security Tests
 # ============================================================================
 
+
 class TestPasswordSecurity:
     """Test password hashing and verification"""
 
-    @pytest.mark.skip(reason="bcrypt 5.0.0 incompatible with passlib 1.7.4 - requires bcrypt 4.x or passlib upgrade")
+    @pytest.mark.skip(
+        reason="bcrypt 5.0.0 incompatible with passlib 1.7.4 - requires bcrypt 4.x or passlib upgrade"
+    )
     def test_set_password(self):
         """Test password hashing"""
-        user = User(
-            username="testuser",
-            email="test@example.com",
-            password_hash=""
-        )
+        user = User(username="testuser", email="test@example.com", password_hash="")
 
         # Use a shorter password to avoid bcrypt 72-byte limit
         test_password = "Pass123!"
@@ -322,14 +347,12 @@ class TestPasswordSecurity:
         assert user.password_hash.startswith("$2b$")
         assert len(user.password_hash) > 50
 
-    @pytest.mark.skip(reason="bcrypt 5.0.0 incompatible with passlib 1.7.4 - requires bcrypt 4.x or passlib upgrade")
+    @pytest.mark.skip(
+        reason="bcrypt 5.0.0 incompatible with passlib 1.7.4 - requires bcrypt 4.x or passlib upgrade"
+    )
     def test_verify_password_correct(self):
         """Test password verification with correct password"""
-        user = User(
-            username="testuser",
-            email="test@example.com",
-            password_hash=""
-        )
+        user = User(username="testuser", email="test@example.com", password_hash="")
 
         # Use a shorter password to avoid bcrypt 72-byte limit
         test_password = "Pass123!"
@@ -337,14 +360,12 @@ class TestPasswordSecurity:
 
         assert user.verify_password(test_password) is True
 
-    @pytest.mark.skip(reason="bcrypt 5.0.0 incompatible with passlib 1.7.4 - requires bcrypt 4.x or passlib upgrade")
+    @pytest.mark.skip(
+        reason="bcrypt 5.0.0 incompatible with passlib 1.7.4 - requires bcrypt 4.x or passlib upgrade"
+    )
     def test_verify_password_incorrect(self):
         """Test password verification with incorrect password"""
-        user = User(
-            username="testuser",
-            email="test@example.com",
-            password_hash=""
-        )
+        user = User(username="testuser", email="test@example.com", password_hash="")
 
         # Use a shorter password to avoid bcrypt 72-byte limit
         test_password = "Pass123!"
@@ -357,6 +378,7 @@ class TestPasswordSecurity:
 # Model Methods Tests
 # ============================================================================
 
+
 class TestModelMethods:
     """Test model methods"""
 
@@ -365,7 +387,7 @@ class TestModelMethods:
         user = User(
             username="testuser",
             email="test@example.com",
-            password_hash="$2b$12$ab$cd422b$"
+            password_hash="$2b$12$ab$cd422b$",
         )
 
         user_dict = user.to_dict()
@@ -380,7 +402,7 @@ class TestModelMethods:
         user = User(
             username="testuser",
             email="test@example.com",
-            password_hash="$2b$12$ab$cd422b$"
+            password_hash="$2b$12$ab$cd422b$",
         )
 
         assert user.is_deleted() is False
@@ -393,7 +415,7 @@ class TestModelMethods:
         user = User(
             username="testuser",
             email="test@example.com",
-            password_hash="$2b$12$ab$cd422b$"
+            password_hash="$2b$12$ab$cd422b$",
         )
 
         repr_str = repr(user)
@@ -405,6 +427,7 @@ class TestModelMethods:
 # Relationship Tests
 # ============================================================================
 
+
 class TestRelationships:
     """Test model relationships"""
 
@@ -413,15 +436,11 @@ class TestRelationships:
         user = User(
             username="testuser",
             email="test@example.com",
-            password_hash="$2b$12$ab$cd422b$"
+            password_hash="$2b$12$ab$cd422b$",
         )
 
         # Use a fixed owner_id since user.id is None before persistence
-        workflow = Workflow(
-            name="Test Workflow",
-            definition={},
-            owner_id=1
-        )
+        workflow = Workflow(name="Test Workflow", definition={}, owner_id=1)
 
         # Note: Relationships require actual database to test properly
         # This test verifies the foreign key field is set correctly
@@ -429,17 +448,9 @@ class TestRelationships:
 
     def test_workflow_job_relationship(self):
         """Test workflow-job relationship"""
-        workflow = Workflow(
-            name="Test Workflow",
-            definition={},
-            owner_id=1
-        )
+        workflow = Workflow(name="Test Workflow", definition={}, owner_id=1)
 
-        job = Job(
-            workflow_id=workflow.id,
-            status="pending",
-            created_by=1
-        )
+        job = Job(workflow_id=workflow.id, status="pending", created_by=1)
 
         assert job.workflow_id == workflow.id
 
@@ -447,6 +458,7 @@ class TestRelationships:
 # ============================================================================
 # Validation Tests
 # ============================================================================
+
 
 class TestValidation:
     """Test model validation"""
@@ -471,6 +483,7 @@ class TestValidation:
 # Edge Case Tests
 # ============================================================================
 
+
 class TestEdgeCases:
     """Test edge cases and boundary conditions"""
 
@@ -479,36 +492,26 @@ class TestEdgeCases:
         user = User(
             username="testuser",
             email="test@example.com",
-            password_hash="$2b$12$ab$cd422b$"
+            password_hash="$2b$12$ab$cd422b$",
         )
 
         assert user.role == "viewer"
 
     def test_workflow_version_default(self):
         """Test workflow version defaults to 1"""
-        workflow = Workflow(
-            name="Test Workflow",
-            definition={},
-            owner_id=1
-        )
+        workflow = Workflow(name="Test Workflow", definition={}, owner_id=1)
 
         assert workflow.version == 1
 
     def test_job_status_default(self):
         """Test job status defaults to pending"""
-        job = Job(
-            workflow_id="workflow-uuid",
-            created_by=1
-        )
+        job = Job(workflow_id="workflow-uuid", created_by=1)
 
         assert job.status == "pending"
         assert job.progress == 0
 
     def test_job_progress_default(self):
         """Test job progress defaults to 0"""
-        job = Job(
-            workflow_id="workflow-uuid",
-            created_by=1
-        )
+        job = Job(workflow_id="workflow-uuid", created_by=1)
 
         assert job.progress == 0

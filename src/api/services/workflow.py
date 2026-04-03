@@ -28,9 +28,7 @@ class WorkflowService:
         self.db = db
 
     async def create_workflow(
-        self,
-        workflow_data: WorkflowCreate,
-        owner_id: int
+        self, workflow_data: WorkflowCreate, owner_id: int
     ) -> Workflow:
         """
         Create a new workflow.
@@ -48,7 +46,7 @@ class WorkflowService:
             description=workflow_data.description,
             definition=workflow_data.definition.dict(),
             owner_id=owner_id,
-            version=1
+            version=1,
         )
 
         self.db.add(workflow)
@@ -60,11 +58,7 @@ class WorkflowService:
 
         return workflow
 
-    async def get_workflow(
-        self,
-        workflow_id: str,
-        owner_id: int
-    ) -> Optional[Workflow]:
+    async def get_workflow(self, workflow_id: str, owner_id: int) -> Optional[Workflow]:
         """
         Get workflow by ID (with ownership check).
 
@@ -80,7 +74,7 @@ class WorkflowService:
                 and_(
                     Workflow.id == workflow_id,
                     Workflow.owner_id == owner_id,
-                    Workflow.deleted_at.is_(None)
+                    Workflow.deleted_at.is_(None),
                 )
             )
         )
@@ -91,7 +85,7 @@ class WorkflowService:
         owner_id: int,
         is_active: Optional[bool] = None,
         page: int = 1,
-        page_size: int = 20
+        page_size: int = 20,
     ) -> Tuple[List[Workflow], int]:
         """
         List workflows with pagination.
@@ -106,10 +100,7 @@ class WorkflowService:
             Tuple of (workflows list, total count)
         """
         query = select(Workflow).where(
-            and_(
-                Workflow.owner_id == owner_id,
-                Workflow.deleted_at.is_(None)
-            )
+            and_(Workflow.owner_id == owner_id, Workflow.deleted_at.is_(None))
         )
 
         if is_active is not None:
@@ -129,10 +120,7 @@ class WorkflowService:
         return list(workflows), total
 
     async def update_workflow(
-        self,
-        workflow_id: str,
-        workflow_data: WorkflowUpdate,
-        owner_id: int
+        self, workflow_id: str, workflow_data: WorkflowUpdate, owner_id: int
     ) -> Optional[Workflow]:
         """
         Update workflow.
@@ -169,11 +157,7 @@ class WorkflowService:
 
         return workflow
 
-    async def delete_workflow(
-        self,
-        workflow_id: str,
-        owner_id: int
-    ) -> bool:
+    async def delete_workflow(self, workflow_id: str, owner_id: int) -> bool:
         """
         Soft delete workflow.
 
@@ -206,7 +190,7 @@ class WorkflowService:
             workflow_id=workflow.id,
             version=workflow.version,
             definition=workflow.definition,
-            created_by=created_by
+            created_by=created_by,
         )
         self.db.add(version)
         await self.db.commit()

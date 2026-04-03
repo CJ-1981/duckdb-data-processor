@@ -30,7 +30,10 @@ class TestConfigCharacterization:
                 "name": "test_db",
             },
             "redis": {"host": "localhost", "port": 6379, "db": 0},
-            "logging": {"level": "INFO", "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
+            "logging": {
+                "level": "INFO",
+                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            },
             "plugins": {"auto_load": True, "enabled": ["csv", "postgresql"]},
         }
 
@@ -120,8 +123,14 @@ class TestConfigCharacterization:
         base_config = tmp_path / "base.yaml"
         override_config = tmp_path / "override.yaml"
 
-        base_content = {"database": {"path": ":memory:", "max_connections": 10}, "redis": {"host": "localhost"}}
-        override_content = {"database": {"max_connections": 20}, "logging": {"level": "DEBUG"}}
+        base_content = {
+            "database": {"path": ":memory:", "max_connections": 10},
+            "redis": {"host": "localhost"},
+        }
+        override_content = {
+            "database": {"max_connections": 20},
+            "logging": {"level": "DEBUG"},
+        }
 
         base_config.write_text(yaml.dump(base_content))
         override_config.write_text(yaml.dump(override_content))

@@ -58,9 +58,9 @@ class UserListResponse(BaseModel):
 
 
 __all__ = [
-    'UserCreate',
-    'UserUpdate',
-    'UserResponse',
-    'PasswordChange',
-    'UserListResponse'
+    "UserCreate",
+    "UserUpdate",
+    "UserResponse",
+    "PasswordChange",
+    "UserListResponse",
 ]

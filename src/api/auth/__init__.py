@@ -23,4 +23,3 @@ from src.api.auth.dependencies import (
     get_current_user_with_role,
     authorize_endpoint,
 )
-

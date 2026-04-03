@@ -9,9 +9,7 @@ All tests should FAIL initially (RED phase) until implementation is complete.
 """
 
 import pytest
-from pathlib import Path
-from typing import Any, Dict
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock
 import threading
 import time
 
@@ -19,6 +17,7 @@ import time
 # ============================================================================
 # FIXTURES - Mock objects for testing
 # ============================================================================
+
 
 @pytest.fixture
 def plugin_paths(tmp_path):
@@ -41,10 +40,11 @@ def plugin_paths(tmp_path):
         "description": "CSV data connector plugin",
         "author": "CJ-1981",
         "dependencies": [],
-        "lifecycle_hooks": ["on_load", "on_enable", "on_disable", "on_unload"]
+        "lifecycle_hooks": ["on_load", "on_enable", "on_disable", "on_unload"],
     }
 
     import json
+
     (valid_plugin / "plugin.json").write_text(json.dumps(metadata))
 
     return {"plugins_dir": plugins_dir, "valid_plugin": valid_plugin}
@@ -64,7 +64,7 @@ def sample_plugin():
         "name": "csv_connector",
         "version": "1.0.0",
         "description": "CSV data connector plugin",
-        "author": "CJ-1981"
+        "author": "CJ-1981",
     }
 
     # Lifecycle hooks
@@ -79,6 +79,7 @@ def sample_plugin():
 # ============================================================================
 # TEST CLASS 1: Plugin Dynamic Loading (Acceptance Criteria #1)
 # ============================================================================
+
 
 class TestPluginDynamicLoading:
     """
@@ -124,12 +125,13 @@ class TestPluginDynamicLoading:
         db_plugin.mkdir()
 
         import json
+
         metadata = {
             "name": "database_connector",
             "version": "1.0.0",
             "description": "Database connector plugin",
             "author": "CJ-1981",
-            "dependencies": []
+            "dependencies": [],
         }
         (db_plugin / "plugin.json").write_text(json.dumps(metadata))
 
@@ -178,6 +180,7 @@ class TestPluginDynamicLoading:
 # ============================================================================
 # TEST CLASS 2: Plugin Lifecycle Hooks (Acceptance Criteria #2)
 # ============================================================================
+
 
 class TestPluginLifecycleHooks:
     """
@@ -302,6 +305,7 @@ class TestPluginLifecycleHooks:
 # TEST CLASS 3: Plugin Metadata Inspection (Acceptance Criteria #3)
 # ============================================================================
 
+
 class TestPluginMetadata:
     """
     GIVEN a plugin is loaded in the registry
@@ -403,7 +407,7 @@ class TestPluginMetadata:
         plugin2.metadata = {
             "name": "database_connector",
             "version": "1.0.0",
-            "description": "Database connector"
+            "description": "Database connector",
         }
 
         registry = PluginRegistry()
@@ -435,6 +439,7 @@ class TestPluginMetadata:
 # TEST CLASS 4: Concurrent Access (Acceptance Criteria #4)
 # ============================================================================
 
+
 class TestPluginConcurrentAccess:
     """
     GIVEN multiple threads accessing the plugin registry
@@ -459,7 +464,7 @@ class TestPluginConcurrentAccess:
             try:
                 registry.load_plugins()
                 load_results.append(True)
-            except Exception as e:
+            except Exception:
                 load_results.append(False)
 
         # Create multiple threads
@@ -592,6 +597,7 @@ class TestPluginConcurrentAccess:
 # TEST CLASS 5: Plugin Dependencies and Error Handling
 # ============================================================================
 
+
 class TestPluginDependencies:
     """
     GIVEN a plugin with dependencies
@@ -624,10 +630,7 @@ class TestPluginDependencies:
         # Register plugin with dependency
         plugin = Mock()
         plugin.name = "csv_connector"
-        plugin.metadata = {
-            "name": "csv_connector",
-            "dependencies": ["core_processor"]
-        }
+        plugin.metadata = {"name": "csv_connector", "dependencies": ["core_processor"]}
         plugin.on_load = Mock(return_value=True)
         plugin.on_enable = Mock(return_value=True)
         plugin.on_disable = Mock(return_value=True)
@@ -652,7 +655,7 @@ class TestPluginDependencies:
         plugin.name = "csv_connector"
         plugin.metadata = {
             "name": "csv_connector",
-            "dependencies": ["nonexistent_dependency"]
+            "dependencies": ["nonexistent_dependency"],
         }
         plugin.on_load = Mock(return_value=True)
         plugin.on_enable = Mock(return_value=True)
@@ -735,6 +738,7 @@ class TestPluginErrorHandling:
 # EDGE CASE TESTS
 # ============================================================================
 
+
 class TestPluginEdgeCases:
     """
     GIVEN various edge case scenarios
@@ -816,6 +820,7 @@ class TestPluginEdgeCases:
 # PERFORMANCE TESTS
 # ============================================================================
 
+
 class TestPluginPerformance:
     """
     GIVEN performance requirements for plugin system
@@ -837,11 +842,12 @@ class TestPluginPerformance:
             plugin_dir.mkdir()
 
             import json
+
             metadata = {
                 "name": f"plugin_{i}",
                 "version": "1.0.0",
                 "description": f"Test plugin {i}",
-                "author": "CJ-1981"
+                "author": "CJ-1981",
             }
             (plugin_dir / "plugin.json").write_text(json.dumps(metadata))
 
@@ -882,7 +888,9 @@ class TestPluginPerformance:
 
         threads = []
         for i in range(50):
-            thread = threading.Thread(target=registry.enable_plugin, args=(f"plugin_{i}",))
+            thread = threading.Thread(
+                target=registry.enable_plugin, args=(f"plugin_{i}",)
+            )
             threads.append(thread)
             thread.start()
 
@@ -899,8 +907,10 @@ class TestPluginPerformance:
 # CUSTOM EXCEPTIONS (Expected to be implemented)
 # ============================================================================
 
+
 class DependencyError(Exception):
     """Raised when plugin dependencies are not satisfied"""
+
     pass
 
 

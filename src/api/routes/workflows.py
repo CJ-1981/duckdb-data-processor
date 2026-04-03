@@ -10,12 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.auth.dependencies import get_current_user, get_db
 from src.api.auth.decorators import require_permission
-from src.api.models.user import User
 from src.api.schemas.workflow import (
     WorkflowCreate,
     WorkflowUpdate,
     WorkflowResponse,
-    WorkflowListResponse
+    WorkflowListResponse,
 )
 from src.api.services.workflow import WorkflowService
 
@@ -28,7 +27,7 @@ router = APIRouter(prefix="/api/v1/workflows", tags=["Workflows"])
 async def create_workflow(
     workflow_data: WorkflowCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Create a new workflow.
@@ -51,7 +50,7 @@ async def list_workflows(
     current_user: dict = Depends(get_current_user),
     is_active: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100)
+    page_size: int = Query(20, ge=1, le=100),
 ):
     """
     List workflows with pagination.
@@ -64,17 +63,14 @@ async def list_workflows(
     owner_id = int(current_user["sub"])
 
     workflows, total = await service.list_workflows(
-        owner_id,
-        is_active=is_active,
-        page=page,
-        page_size=page_size
+        owner_id, is_active=is_active, page=page, page_size=page_size
     )
 
     return WorkflowListResponse(
         workflows=workflows,  # type: ignore[arg-type]
         total=total,
         page=page,
-        page_size=page_size
+        page_size=page_size,
     )
 
 
@@ -83,7 +79,7 @@ async def list_workflows(
 async def get_workflow(
     workflow_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Get workflow by ID.
@@ -98,8 +94,7 @@ async def get_workflow(
     workflow = await service.get_workflow(workflow_id, owner_id)
     if not workflow:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workflow not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
         )
 
     return workflow
@@ -111,7 +106,7 @@ async def update_workflow(
     workflow_id: str,
     workflow_data: WorkflowUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Update workflow.
@@ -126,8 +121,7 @@ async def update_workflow(
     workflow = await service.update_workflow(workflow_id, workflow_data, owner_id)
     if not workflow:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workflow not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
         )
 
     return workflow
@@ -139,7 +133,7 @@ async def partial_update_workflow(
     workflow_id: str,
     workflow_data: WorkflowUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Partial update workflow.
@@ -154,8 +148,7 @@ async def partial_update_workflow(
     workflow = await service.update_workflow(workflow_id, workflow_data, owner_id)
     if not workflow:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workflow not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
         )
 
     return workflow
@@ -166,7 +159,7 @@ async def partial_update_workflow(
 async def delete_workflow(
     workflow_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Delete workflow (soft delete).
@@ -181,8 +174,7 @@ async def delete_workflow(
     success = await service.delete_workflow(workflow_id, owner_id)
     if not success:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workflow not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
         )
 
     return None

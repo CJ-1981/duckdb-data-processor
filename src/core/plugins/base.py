@@ -7,12 +7,13 @@ All plugins must inherit from Plugin and implement lifecycle methods.
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from dataclasses import dataclass, field
 
 
 class PluginStatus(Enum):
     """Plugin lifecycle status states"""
+
     LOADED = "loaded"
     ENABLED = "enabled"
     DISABLED = "disabled"
@@ -32,6 +33,7 @@ class PluginMetadata:
         dependencies: List of required plugin dependencies
         lifecycle_hooks: List of supported lifecycle hooks
     """
+
     name: str
     version: str
     description: str = ""

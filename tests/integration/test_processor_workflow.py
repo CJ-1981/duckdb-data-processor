@@ -10,17 +10,17 @@ Tests end-to-end workflow scenarios including:
 import pytest
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
-import duckdb
+from unittest.mock import Mock
 
 from src.core.processor import Processor
-from src.core.plugins import Plugin, PluginRegistry
+from src.core.plugins import Plugin
 from src.core.config.loader import Config
 
 
 # ========================================================================
 #  Test Fixtures
 # ========================================================================
+
 
 @pytest.fixture
 def sample_csv_1():
@@ -30,7 +30,7 @@ def sample_csv_1():
 2,Bob,Sales,60000
 3,Charlie,Engineering,90000
 """
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
         f.write(csv_data)
         yield f.name
     Path(f.name).unlink(missing_ok=True)
@@ -44,7 +44,7 @@ Engineering,NYC,500000
 Sales,LA,300000
 Marketing,CHI,200000
 """
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
         f.write(csv_data)
         yield f.name
     Path(f.name).unlink(missing_ok=True)
@@ -75,6 +75,7 @@ processor:
 #  End-to-End Workflow Tests
 # ========================================================================
 
+
 class TestEndToEndWorkflow:
     """Test complete end-to-end workflows"""
 
@@ -88,19 +89,24 @@ class TestEndToEndWorkflow:
             processor.load_csv(sample_csv_1)
 
             # Transform data
-            processor.add_column('salary_tier', """
+            processor.add_column(
+                "salary_tier",
+                """
                 CASE
                     WHEN CAST(salary AS INTEGER) >= 80000 THEN 'HIGH'
                     ELSE 'STANDARD'
                 END
-            """)
+            """,
+            )
 
             # Filter data
             filtered = processor.filter("salary_tier = 'HIGH'")
 
             # Export result
             output_path = tmp_path / "output.csv"
-            processor.export_csv(str(output_path), query="SELECT * FROM data WHERE salary_tier = 'HIGH'")
+            processor.export_csv(
+                str(output_path), query="SELECT * FROM data WHERE salary_tier = 'HIGH'"
+            )
 
             # Verify export
             assert output_path.exists()
@@ -111,10 +117,10 @@ class TestEndToEndWorkflow:
             processor = Processor()
 
             # Load first dataset
-            processor.load_csv(sample_csv_1, table_name='employees')
+            processor.load_csv(sample_csv_1, table_name="employees")
 
             # Load second dataset
-            processor.load_csv(sample_csv_2, table_name='departments')
+            processor.load_csv(sample_csv_2, table_name="departments")
 
             # Join datasets
             result = processor.sql("""
@@ -132,10 +138,10 @@ class TestEndToEndWorkflow:
             processor.load_csv(sample_csv_1)
 
             # Aggregate by department
-            result = processor.aggregate('department', 'salary', 'AVG')
+            result = processor.aggregate("department", "salary", "AVG")
 
-            assert 'department' in result
-            assert 'avg_salary' in result
+            assert "department" in result
+            assert "avg_salary" in result
 
     def test_multiple_exports(self, sample_csv_1, tmp_path):
         """Test exporting to multiple formats"""
@@ -165,6 +171,7 @@ class TestEndToEndWorkflow:
 #  Plugin Integration Tests
 # ========================================================================
 
+
 class TestPluginIntegration:
     """Test plugin integration with processor"""
 
@@ -178,10 +185,15 @@ class TestPluginIntegration:
 
                 def on_processor_load(self, processor):
                     """Add custom method to processor"""
-                    def custom_filter_by_salary(processor_self, min_salary):
-                        return processor_self.filter(f"CAST(salary AS INTEGER) >= {min_salary}")
 
-                    processor.custom_filter_by_salary = lambda min_salary: custom_filter_by_salary(processor, min_salary)
+                    def custom_filter_by_salary(processor_self, min_salary):
+                        return processor_self.filter(
+                            f"CAST(salary AS INTEGER) >= {min_salary}"
+                        )
+
+                    processor.custom_filter_by_salary = lambda min_salary: (
+                        custom_filter_by_salary(processor, min_salary)
+                    )
 
             processor = Processor()
             processor.plugin_registry.register(CustomProcessingPlugin())
@@ -209,7 +221,7 @@ class TestPluginIntegration:
             processor.load_csv(sample_csv_1)
 
             # Verify hook was called
-            if hasattr(mock_plugin, 'on_data_load'):
+            if hasattr(mock_plugin, "on_data_load"):
                 mock_plugin.on_data_load.assert_called()
 
     def test_multiple_plugins_cooperation(self, sample_csv_1):
@@ -246,6 +258,7 @@ class TestPluginIntegration:
 #  Configuration-Driven Behavior Tests
 # ========================================================================
 
+
 class TestConfigurationDrivenBehavior:
     """Test that processor behavior is controlled by configuration"""
 
@@ -258,7 +271,7 @@ class TestConfigurationDrivenBehavior:
             # Should use CSV as default connector
             processor.load_data(sample_csv_1)  # Uses default connector
 
-            assert processor.table_exists('data')
+            assert processor.table_exists("data")
 
     def test_config_memory_limit(self, tmp_path):
         """Test memory limit from config"""
@@ -278,7 +291,7 @@ processor:
 
         # Create a large file
         csv_path = tmp_path / "large.csv"
-        with open(csv_path, 'w') as f:
+        with open(csv_path, "w") as f:
             f.write("id,data\n")
             for i in range(10000):
                 f.write(f"{i},{'x' * 1000}\n")
@@ -303,6 +316,7 @@ processor:
 #  Performance Tests
 # ========================================================================
 
+
 class TestProcessorPerformance:
     """Test performance characteristics"""
 
@@ -310,7 +324,7 @@ class TestProcessorPerformance:
         """Test processing large file efficiently"""
         # Create a moderately large file
         csv_path = tmp_path / "large.csv"
-        with open(csv_path, 'w') as f:
+        with open(csv_path, "w") as f:
             f.write("id,name,value,category\n")
             for i in range(50000):
                 f.write(f"{i},Item_{i},{i * 10.5},Cat_{i % 10}\n")
@@ -320,13 +334,13 @@ class TestProcessorPerformance:
             processor.load_csv(str(csv_path))
 
             # Should be able to query efficiently
-            result = processor.aggregate('category', 'value', 'SUM')
+            result = processor.aggregate("category", "value", "SUM")
             assert len(result) == 10  # 10 categories
 
     def test_memory_efficiency(self, tmp_path):
         """Test memory efficiency with streaming"""
         csv_path = tmp_path / "stream.csv"
-        with open(csv_path, 'w') as f:
+        with open(csv_path, "w") as f:
             f.write("id,data\n")
             for i in range(10000):
                 f.write(f"{i},{'x' * 500}\n")
@@ -337,12 +351,13 @@ class TestProcessorPerformance:
 
             # Should have used streaming
             stats = processor.get_statistics()
-            assert stats['row_count'] == 10000
+            assert stats["row_count"] == 10000
 
 
 # ========================================================================
 #  Error Recovery Tests
 # ========================================================================
+
 
 class TestErrorRecovery:
     """Test error recovery and resilience"""

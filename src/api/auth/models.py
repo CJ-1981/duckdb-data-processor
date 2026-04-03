@@ -19,9 +19,15 @@ class Role(BaseModel):
     """
 
     name: str = Field(..., description="Unique role name")
-    permissions: List[str] = Field(default_factory=list, description="List of permission strings")
-    inherits_from: List[str] = Field(default_factory=list, description="Parent roles to inherit from")
-    description: Optional[str] = Field(None, description="Human-readable role description")
+    permissions: List[str] = Field(
+        default_factory=list, description="List of permission strings"
+    )
+    inherits_from: List[str] = Field(
+        default_factory=list, description="Parent roles to inherit from"
+    )
+    description: Optional[str] = Field(
+        None, description="Human-readable role description"
+    )
 
     class Config:
         json_schema_extra = {
@@ -42,9 +48,15 @@ class Permission(BaseModel):
     """
 
     name: str = Field(..., description="Permission name in resource:action format")
-    resource: str = Field(..., description="Resource being accessed (e.g., data, jobs, users)")
-    action: str = Field(..., description="Action being performed (e.g., read, write, delete)")
-    description: Optional[str] = Field(None, description="Human-readable permission description")
+    resource: str = Field(
+        ..., description="Resource being accessed (e.g., data, jobs, users)"
+    )
+    action: str = Field(
+        ..., description="Action being performed (e.g., read, write, delete)"
+    )
+    description: Optional[str] = Field(
+        None, description="Human-readable permission description"
+    )
 
     class Config:
         json_schema_extra = {
@@ -67,7 +79,9 @@ class UserRole(BaseModel):
     user_id: int = Field(..., description="User ID")
     role_name: str = Field(..., description="Role name assigned to user")
     assigned_at: datetime = Field(..., description="Timestamp when role was assigned")
-    assigned_by: Optional[int] = Field(None, description="User ID of admin who assigned the role")
+    assigned_by: Optional[int] = Field(
+        None, description="User ID of admin who assigned the role"
+    )
 
     class Config:
         json_schema_extra = {
@@ -87,9 +101,15 @@ class RoleConfig(BaseModel):
     @MX:NOTE: Used to parse role configuration from YAML
     """
 
-    permissions: List[str] = Field(default_factory=list, description="List of permission strings")
-    inherits_from: List[str] = Field(default_factory=list, description="Parent roles to inherit from")
-    description: Optional[str] = Field(None, description="Human-readable role description")
+    permissions: List[str] = Field(
+        default_factory=list, description="List of permission strings"
+    )
+    inherits_from: List[str] = Field(
+        default_factory=list, description="Parent roles to inherit from"
+    )
+    description: Optional[str] = Field(
+        None, description="Human-readable role description"
+    )
 
 
 class RBACConfig(BaseModel):
@@ -101,9 +121,12 @@ class RBACConfig(BaseModel):
     """
 
     enabled: bool = Field(default=True, description="Enable/disable RBAC")
-    default_role: str = Field(default="viewer", description="Default role for new users")
+    default_role: str = Field(
+        default="viewer", description="Default role for new users"
+    )
     roles: dict[str, RoleConfig] = Field(
-        default_factory=dict, description="Role definitions mapping role name to configuration"
+        default_factory=dict,
+        description="Role definitions mapping role name to configuration",
     )
 
     class Config:

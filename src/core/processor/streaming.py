@@ -6,19 +6,18 @@ state management (pause/resume/cancel), and automatic chunk size adjustment.
 """
 
 import os
-import time
 import threading
 import psutil
 from enum import Enum
 from typing import Iterator, List, Dict, Any, Optional
-from dataclasses import dataclass
 
 from ..database import DatabaseConnection
-from .progress import ProgressTracker, Operation
+from .progress import ProgressTracker
 
 
 class StreamingState(Enum):
     """Streaming operation states"""
+
     IDLE = "idle"
     STREAMING = "streaming"
     PAUSED = "paused"
@@ -117,7 +116,9 @@ class StreamProcessor:
             rows_processed = 0
             bytes_processed = 0
 
-            for chunk in self.db_connection.stream(query, parameters or [], self.chunk_size):
+            for chunk in self.db_connection.stream(
+                query, parameters or [], self.chunk_size
+            ):
                 # Check for cancellation
                 if self._cancel_event.is_set():
                     with self._state_lock:
@@ -148,7 +149,7 @@ class StreamProcessor:
                 if self.auto_adjust_chunk_size:
                     self._adjust_chunk_size()
 
-        except Exception as e:
+        except Exception:
             # Reset state on error
             with self._state_lock:
                 self._state = StreamingState.IDLE

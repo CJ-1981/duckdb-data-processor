@@ -7,10 +7,9 @@ Thread-safe connection pool with health checking and automatic reconnection.
 import threading
 import time
 import duckdb
-from typing import Optional, List
-from contextlib import contextmanager
+from typing import List
 
-from .exceptions import ConnectionError, PoolExhaustedError, ConnectionValidationError
+from .exceptions import ConnectionError, PoolExhaustedError
 
 
 class PooledConnection:

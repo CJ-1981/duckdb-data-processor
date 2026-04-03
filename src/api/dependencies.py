@@ -4,12 +4,15 @@ Dependency Injection Module
 Provides dependency injection functions for FastAPI endpoints.
 """
 
-from typing import Optional, Generator
+from typing import Optional, Generator, Annotated
+
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.processor import Processor
 from src.core.config.loader import Config
 from src.api.services.users import UserService
+from src.api.auth.dependencies import get_db
 
 
 # Singleton instances
@@ -99,12 +102,12 @@ def reset_dependencies():
     _config_instance = None
 
 
-def get_user_service(db: AsyncSession) -> UserService:
+def get_user_service(db: Annotated[AsyncSession, Depends(get_db)]) -> UserService:
     """
     Provide UserService instance via dependency injection.
 
     Args:
-        db: Database session
+        db: Database session (injected via Depends)
 
     Returns:
         UserService: User service instance
@@ -125,10 +128,10 @@ def get_current_user():
     """
     # Mock implementation for now
     from unittest.mock import Mock
+
     mock_user = Mock()
     mock_user.id = 1
     mock_user.username = "testuser"
     mock_user.email = "test@example.com"
     mock_user.is_admin = True
     return mock_user
-

@@ -72,7 +72,7 @@ class TestCSVConnectorCharacterization:
         csv_path.write_text(csv_content)
 
         # Create connector with semicolon delimiter
-        semicolon_connector = CSVConnector(delimiter=';')
+        semicolon_connector = CSVConnector(delimiter=";")
         semicolon_connector.connect(source=str(csv_path))
         rows = list(semicolon_connector.read(source=str(csv_path)))
 
@@ -126,10 +126,10 @@ class TestCSVConnectorCharacterization:
     def test_read_csv_with_quotes(self, connector, tmp_path):
         """Characterize: Reading CSV with quoted fields"""
         csv_path = tmp_path / "quoted.csv"
-        csv_content = '''id,name,description
+        csv_content = """id,name,description
 1,"Alice, Smith","Developer, with, commas"
 2,"Bob","Manager"
-'''
+"""
         csv_path.write_text(csv_content)
 
         connector.connect(source=str(csv_path))
@@ -146,7 +146,7 @@ class TestCSVConnectorCharacterization:
         csv_path.write_bytes(csv_content.encode("utf-8"))
 
         # Create connector with UTF-8 encoding
-        utf8_connector = CSVConnector(encoding='utf-8')
+        utf8_connector = CSVConnector(encoding="utf-8")
         utf8_connector.connect(source=str(csv_path))
         rows = list(utf8_connector.read(source=str(csv_path)))
 

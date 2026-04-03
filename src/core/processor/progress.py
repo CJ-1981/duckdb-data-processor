@@ -7,12 +7,13 @@ Provides real-time progress tracking with callbacks and ETA estimation.
 import time
 import threading
 from typing import Optional, List, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 
 
 class Operation(Enum):
     """Current operation state"""
+
     IDLE = "idle"
     READING = "reading"
     PROCESSING = "processing"
@@ -26,6 +27,7 @@ class ProgressInfo:
 
     Tracks rows and bytes processed, calculates percentage and ETA.
     """
+
     rows_processed: int = 0
     bytes_processed: int = 0
     total_rows: Optional[int] = None

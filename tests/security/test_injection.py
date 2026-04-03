@@ -9,14 +9,12 @@ All tests verify that parameterized queries are enforced.
 """
 
 import pytest
-import tempfile
-from pathlib import Path
-from unittest.mock import Mock, patch
 
 
 # ============================================================================
 # FIXTURES
 # ============================================================================
+
 
 @pytest.fixture
 def temp_db_path(tmp_path):
@@ -32,12 +30,14 @@ def vulnerable_db(temp_db_path):
     THEN return a connection for testing
     """
     from src.core.database import DatabaseConnection
+
     return DatabaseConnection(temp_db_path)
 
 
 # ============================================================================
 # TEST CLASS 1: SQL Injection Attack Patterns
 # ============================================================================
+
 
 class TestSQLInjectionAttackPatterns:
     """
@@ -63,14 +63,13 @@ class TestSQLInjectionAttackPatterns:
         """)
         vulnerable_db.execute(
             "INSERT INTO users VALUES (?, ?, ?, ?)",
-            parameters=[1, "alice", "secret123", False]
+            parameters=[1, "alice", "secret123", False],
         )
 
         # Attempt tautology attack
         malicious_input = "admin' OR '1'='1"
         result = vulnerable_db.execute(
-            "SELECT * FROM users WHERE username = ?",
-            parameters=[malicious_input]
+            "SELECT * FROM users WHERE username = ?", parameters=[malicious_input]
         )
 
         # Should return empty (no user named "admin' OR '1'='1")
@@ -91,15 +90,13 @@ class TestSQLInjectionAttackPatterns:
             )
         """)
         vulnerable_db.execute(
-            "INSERT INTO products VALUES (?, ?, ?)",
-            parameters=[1, "Widget", 9.99]
+            "INSERT INTO products VALUES (?, ?, ?)", parameters=[1, "Widget", 9.99]
         )
 
         # Attempt UNION-based injection
         malicious_input = "Widget' UNION SELECT NULL, NULL, NULL--"
         result = vulnerable_db.execute(
-            "SELECT * FROM products WHERE name = ?",
-            parameters=[malicious_input]
+            "SELECT * FROM products WHERE name = ?", parameters=[malicious_input]
         )
 
         # Should return empty (no product with that name)
@@ -119,15 +116,15 @@ class TestSQLInjectionAttackPatterns:
             )
         """)
         vulnerable_db.execute(
-            "INSERT INTO users VALUES (?, ?)",
-            parameters=[1, "alice"]
+            "INSERT INTO users VALUES (?, ?)", parameters=[1, "alice"]
         )
 
         # Attempt error-based injection
-        malicious_input = "alice' AND 1=CONVERT(int, (SELECT TOP 1 name FROM sysobjects))--"
+        malicious_input = (
+            "alice' AND 1=CONVERT(int, (SELECT TOP 1 name FROM sysobjects))--"
+        )
         result = vulnerable_db.execute(
-            "SELECT * FROM users WHERE username = ?",
-            parameters=[malicious_input]
+            "SELECT * FROM users WHERE username = ?", parameters=[malicious_input]
         )
 
         # Should return empty (no such user)
@@ -147,15 +144,13 @@ class TestSQLInjectionAttackPatterns:
             )
         """)
         vulnerable_db.execute(
-            "INSERT INTO users VALUES (?, ?)",
-            parameters=[1, "alice"]
+            "INSERT INTO users VALUES (?, ?)", parameters=[1, "alice"]
         )
 
         # Attempt blind injection
         malicious_input = "alice' AND 1=1--"
         result = vulnerable_db.execute(
-            "SELECT * FROM users WHERE username = ?",
-            parameters=[malicious_input]
+            "SELECT * FROM users WHERE username = ?", parameters=[malicious_input]
         )
 
         # Should return empty (no such user)
@@ -175,15 +170,13 @@ class TestSQLInjectionAttackPatterns:
             )
         """)
         vulnerable_db.execute(
-            "INSERT INTO users VALUES (?, ?)",
-            parameters=[1, "alice"]
+            "INSERT INTO users VALUES (?, ?)", parameters=[1, "alice"]
         )
 
         # Attempt stacked query injection
         malicious_input = "alice'; DROP TABLE users; --"
         result = vulnerable_db.execute(
-            "SELECT * FROM users WHERE username = ?",
-            parameters=[malicious_input]
+            "SELECT * FROM users WHERE username = ?", parameters=[malicious_input]
         )
 
         # Should return empty (no such user)
@@ -197,6 +190,7 @@ class TestSQLInjectionAttackPatterns:
 # ============================================================================
 # TEST CLASS 2: Parameterized Query Enforcement
 # ============================================================================
+
 
 class TestParameterizedQueryEnforcement:
     """
@@ -224,8 +218,7 @@ class TestParameterizedQueryEnforcement:
 
         # Safe approach: use parameters
         result = vulnerable_db.execute(
-            "INSERT INTO users VALUES (?, ?)",
-            parameters=[1, malicious_name]
+            "INSERT INTO users VALUES (?, ?)", parameters=[1, malicious_name]
         )
 
         # Verify insertion succeeded safely
@@ -252,12 +245,11 @@ class TestParameterizedQueryEnforcement:
         malicious_data = [
             [1, "alice", "alice@example.com"],
             [2, "bob'; DROP TABLE users; --", "bob@example.com"],
-            [3, "charlie", "charlie@example.com"]
+            [3, "charlie", "charlie@example.com"],
         ]
 
         vulnerable_db.execute_batch(
-            "INSERT INTO users VALUES (?, ?, ?)",
-            parameters_list=malicious_data
+            "INSERT INTO users VALUES (?, ?, ?)", parameters_list=malicious_data
         )
 
         # Verify all rows inserted safely
@@ -277,9 +269,9 @@ class TestParameterizedQueryEnforcement:
 
         # Attempt to build query with malicious input
         malicious_name = "admin' OR '1'='1"
-        query, params = builder.select("users") \
-            .where("name = ?", [malicious_name]) \
-            .build()
+        query, params = (
+            builder.select("users").where("name = ?", [malicious_name]).build()
+        )
 
         # Verify input is in parameters, not query
         assert "admin" not in query
@@ -304,8 +296,7 @@ class TestParameterizedQueryEnforcement:
         # Safe approach: always use parameters
         user_input = "alice"
         vulnerable_db.execute(
-            "INSERT INTO users VALUES (?, ?)",
-            parameters=[1, user_input]
+            "INSERT INTO users VALUES (?, ?)", parameters=[1, user_input]
         )
 
         # Verify safe execution
@@ -316,6 +307,7 @@ class TestParameterizedQueryEnforcement:
 # ============================================================================
 # TEST CLASS 3: Special Character Handling
 # ============================================================================
+
 
 class TestSpecialCharacterHandling:
     """
@@ -341,14 +333,12 @@ class TestSpecialCharacterHandling:
         # Insert text with quotes
         text_with_quotes = "O'Reilly"
         vulnerable_db.execute(
-            "INSERT INTO test VALUES (?, ?)",
-            parameters=[1, text_with_quotes]
+            "INSERT INTO test VALUES (?, ?)", parameters=[1, text_with_quotes]
         )
 
         # Query back
         result = vulnerable_db.execute(
-            "SELECT * FROM test WHERE text = ?",
-            parameters=[text_with_quotes]
+            "SELECT * FROM test WHERE text = ?", parameters=[text_with_quotes]
         )
 
         assert len(result) == 1
@@ -371,14 +361,12 @@ class TestSpecialCharacterHandling:
         # Insert path with backslashes
         path_with_backslash = "C:\\Users\\test\\file.txt"
         vulnerable_db.execute(
-            "INSERT INTO test VALUES (?, ?)",
-            parameters=[1, path_with_backslash]
+            "INSERT INTO test VALUES (?, ?)", parameters=[1, path_with_backslash]
         )
 
         # Query back
         result = vulnerable_db.execute(
-            "SELECT * FROM test WHERE path = ?",
-            parameters=[path_with_backslash]
+            "SELECT * FROM test WHERE path = ?", parameters=[path_with_backslash]
         )
 
         assert len(result) == 1
@@ -401,14 +389,12 @@ class TestSpecialCharacterHandling:
         # Insert data with null byte (if supported)
         data_with_null = "test\x00data"
         vulnerable_db.execute(
-            "INSERT INTO test VALUES (?, ?)",
-            parameters=[1, data_with_null]
+            "INSERT INTO test VALUES (?, ?)", parameters=[1, data_with_null]
         )
 
         # Query back
         result = vulnerable_db.execute(
-            "SELECT * FROM test WHERE data = ?",
-            parameters=[data_with_null]
+            "SELECT * FROM test WHERE data = ?", parameters=[data_with_null]
         )
 
         # May or may not match depending on DB support
@@ -432,14 +418,12 @@ class TestSpecialCharacterHandling:
         # Insert unicode text
         unicode_text = "Hello 世界 🌍"
         vulnerable_db.execute(
-            "INSERT INTO test VALUES (?, ?)",
-            parameters=[1, unicode_text]
+            "INSERT INTO test VALUES (?, ?)", parameters=[1, unicode_text]
         )
 
         # Query back
         result = vulnerable_db.execute(
-            "SELECT * FROM test WHERE text = ?",
-            parameters=[unicode_text]
+            "SELECT * FROM test WHERE text = ?", parameters=[unicode_text]
         )
 
         assert len(result) == 1
@@ -449,6 +433,7 @@ class TestSpecialCharacterHandling:
 # ============================================================================
 # TEST CLASS 4: Common Attack Vectors
 # ============================================================================
+
 
 class TestCommonAttackVectors:
     """
@@ -473,14 +458,14 @@ class TestCommonAttackVectors:
         """)
         vulnerable_db.execute(
             "INSERT INTO users VALUES (?, ?, ?)",
-            parameters=[1, "admin", "hashed_password"]
+            parameters=[1, "admin", "hashed_password"],
         )
 
         # Attempt login bypass
         malicious_username = "admin' --"
         result = vulnerable_db.execute(
             "SELECT * FROM users WHERE username = ? AND password = ?",
-            parameters=[malicious_username, "anything"]
+            parameters=[malicious_username, "anything"],
         )
 
         # Should return empty (no such user)
@@ -502,14 +487,14 @@ class TestCommonAttackVectors:
         """)
         vulnerable_db.execute(
             "INSERT INTO products VALUES (?, ?, ?)",
-            parameters=[1, "Widget", "A useful widget"]
+            parameters=[1, "Widget", "A useful widget"],
         )
 
         # Attempt search injection
         malicious_search = "widget' OR '1'='1"
         result = vulnerable_db.execute(
             "SELECT * FROM products WHERE name = ? OR description = ?",
-            parameters=[malicious_search, malicious_search]
+            parameters=[malicious_search, malicious_search],
         )
 
         # Should return empty (no match)
@@ -529,8 +514,7 @@ class TestCommonAttackVectors:
             )
         """)
         vulnerable_db.execute(
-            "INSERT INTO users VALUES (?, ?)",
-            parameters=[1, "alice"]
+            "INSERT INTO users VALUES (?, ?)", parameters=[1, "alice"]
         )
 
         # Attempt ID-based injection with string ID
@@ -539,8 +523,7 @@ class TestCommonAttackVectors:
         # The key is that the injection doesn't work
         try:
             result = vulnerable_db.execute(
-                "SELECT * FROM users WHERE id = ?",
-                parameters=[malicious_id]
+                "SELECT * FROM users WHERE id = ?", parameters=[malicious_id]
             )
             # If it doesn't error, it should return empty
             assert len(result) == 0
@@ -565,16 +548,14 @@ class TestCommonAttackVectors:
         """)
         vulnerable_db.execute(
             "INSERT INTO users VALUES (?, ?, ?)",
-            parameters=[1, "alice", "alice@example.com"]
+            parameters=[1, "alice", "alice@example.com"],
         )
 
         # Attempt ORDER BY injection (should be validated, not parameterized)
         # This is a special case - ORDER BY typically requires whitelisting
         try:
             # Safe approach: use whitelisted column names
-            result = vulnerable_db.execute(
-                "SELECT * FROM users ORDER BY username ASC"
-            )
+            result = vulnerable_db.execute("SELECT * FROM users ORDER BY username ASC")
             assert len(result) == 1
         except Exception:
             # If validation is enforced, that's also acceptable
@@ -584,6 +565,7 @@ class TestCommonAttackVectors:
 # ============================================================================
 # TEST CLASS 5: Second-Order Injection
 # ============================================================================
+
 
 class TestSecondOrderInjection:
     """
@@ -609,8 +591,7 @@ class TestSecondOrderInjection:
         # Store malicious input
         malicious_name = "admin'; DROP TABLE users; --"
         vulnerable_db.execute(
-            "INSERT INTO users VALUES (?, ?)",
-            parameters=[1, malicious_name]
+            "INSERT INTO users VALUES (?, ?)", parameters=[1, malicious_name]
         )
 
         # Retrieve and use in another query (still safe)
@@ -619,8 +600,7 @@ class TestSecondOrderInjection:
 
         # Use stored value as parameter (safe)
         result2 = vulnerable_db.execute(
-            "SELECT * FROM users WHERE name = ?",
-            parameters=[stored_name]
+            "SELECT * FROM users WHERE name = ?", parameters=[stored_name]
         )
 
         assert len(result2) == 1
@@ -630,6 +610,7 @@ class TestSecondOrderInjection:
 # ============================================================================
 # TEST CLASS 6: Batch Operations Security
 # ============================================================================
+
 
 class TestBatchOperationsSecurity:
     """
@@ -653,15 +634,10 @@ class TestBatchOperationsSecurity:
         """)
 
         # Mixed data
-        mixed_data = [
-            [1, "alice"],
-            [2, "bob'; DROP TABLE users; --"],
-            [3, "charlie"]
-        ]
+        mixed_data = [[1, "alice"], [2, "bob'; DROP TABLE users; --"], [3, "charlie"]]
 
         vulnerable_db.execute_batch(
-            "INSERT INTO users VALUES (?, ?)",
-            parameters_list=mixed_data
+            "INSERT INTO users VALUES (?, ?)", parameters_list=mixed_data
         )
 
         # Verify all rows inserted safely
