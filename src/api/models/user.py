@@ -48,6 +48,21 @@ class User(BaseModel):
     # @MX:ANCHOR: User-job relationship (fan_in >= 3 callers expected)
     jobs = relationship("Job", back_populates="creator")
 
+    def __init__(self, **kwargs):
+        """Initialize User with defaults for non-nullable fields
+
+        Provides Python-level defaults since SQLAlchemy defaults only apply at DB level.
+        """
+        # Call parent init first
+        super().__init__(**kwargs)
+
+        # Set defaults AFTER SQLAlchemy initialization
+        # Column defaults only apply at DB level, not Python object level
+        if not hasattr(self, 'is_active') or self.is_active is None:
+            object.__setattr__(self, 'is_active', True)
+        if not hasattr(self, 'role') or self.role is None:
+            object.__setattr__(self, 'role', UserRole.viewer)
+
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username={self.username}, role={self.role})>"
 
@@ -77,3 +92,25 @@ class User(BaseModel):
         """
         # This will be implemented when bcrypt is installed
         raise NotImplementedError("Password verification requires bcrypt installation")
+
+
+# Event listener to set defaults after initialization
+# This must be defined after the User class
+from sqlalchemy import event
+
+@event.listens_for(User, "init", propagate=True)
+def set_user_defaults(target, args, kwargs):
+    """Set default values for User model after SQLAlchemy initialization
+
+    This event listener runs after SQLAlchemy's internal processing but before
+    the object is returned to the caller. It ensures defaults are set even when
+    not explicitly provided in kwargs.
+
+    # @MX:NOTE: Event listener ensures defaults are set at SQLAlchemy level
+    """
+    # Set defaults directly on the instance using object.__setattr__
+    # This bypasses any SQLAlchemy attribute tracking
+    if not hasattr(target, 'is_active') or getattr(target, 'is_active', None) is None:
+        object.__setattr__(target, 'is_active', True)
+    if not hasattr(target, 'role') or getattr(target, 'role', None) is None:
+        object.__setattr__(target, 'role', UserRole.viewer)

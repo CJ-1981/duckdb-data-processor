@@ -9,7 +9,7 @@ This module defines the WorkflowVersion model with
 """
 
 from typing import TYPE_CHECKING
-from sqlalchemy import String, Integer, Text, JSON, Column
+from sqlalchemy import String, Integer, Text, JSON, Column, ForeignKey
 from sqlalchemy.orm import relationship
 
 from .base import BaseModel
@@ -25,20 +25,23 @@ class WorkflowVersion(BaseModel):
     __tablename__ = "workflow_versions"
 
     # Version identification
-    workflow_id = Column(Integer, nullable=False, index=True)
+    # @MX:ANCHOR: Foreign key to workflows table (fan_in >= 3: WorkflowVersion model, version history, rollback queries)
+    workflow_id = Column(Integer, ForeignKey("workflows.id"), nullable=False, index=True)
     version = Column(Integer, nullable=False)
 
     # Version definition
     definition = Column(JSON, nullable=False)
 
     # Audit trail
-    created_by = Column(Integer, nullable=False, index=True)
+    # @MX:ANCHOR: Foreign key to users table (fan_in >= 3: WorkflowVersion model, audit logs, change tracking)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     # Relationships
     # @MX:ANCHOR: WorkflowVersion-workflow relationship (fan_in >= 3 callers expected)
     workflow = relationship("Workflow", back_populates="versions")
     # @MX:ANCHOR: WorkflowVersion-creator relationship (fan_in >= 3 callers expected)
-    creator = relationship("User", back_populates="workflow_versions")
+    # Note: User model doesn't have workflow_versions backref, so no back_populates here
+    creator = relationship("User")
 
     def __repr__(self) -> str:
         return f"<WorkflowVersion(id={self.id}, workflow_id={self.workflow_id}, version={self.version})>"

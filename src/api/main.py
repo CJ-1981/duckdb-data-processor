@@ -6,13 +6,10 @@ Creates the main FastAPI application instance with middleware stack,
 """
 
 import logging
-from typing import Optional
 from contextlib import asynccontextmanager
-from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.core.config.loader import Config
@@ -33,6 +30,31 @@ from src.api.routes.jobs import router as jobs_router
 logger = logging.getLogger(__name__)
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """FastAPI lifespan context manager for startup and shutdown events"""
+    # Startup
+    logger.info("Starting DuckDB Data Processor API...")
+
+    # Initialize processor singleton
+    processor_gen = get_processor()
+    processor = next(processor_gen)
+    app.state.processor = processor
+    logger.info("Processor initialized")
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down DuckDB Data Processor API...")
+
+    # Close processor if exists
+    processor = app.state.processor
+    if processor:
+        processor.close()
+
+    logger.info("Application shutdown complete")
+
+
 def create_app() -> FastAPI:
     """Create FastAPI application instance"""
     app = FastAPI(
@@ -40,12 +62,12 @@ def create_app() -> FastAPI:
         version="1.0.0",
         description="Full-stack data analysis platform powered by DuckDB",
         docs_url="/docs",
-        redoc_url="/redoc"
+        redoc_url="/redoc",
+        lifespan=lifespan
     )
 
     # Load configuration
     config = get_config()
-    app_config = config
 
     # Configure CORS middleware
     # @MX:NOTE: CORS must to be configured from config
@@ -77,31 +99,6 @@ def create_app() -> FastAPI:
     app.include_router(workflows_router) # Workflow management endpoints
     app.include_router(jobs_router)      # Job execution endpoints
 
-    # Lifecycle events
-    @app.on_event("startup")
-    async def startup_event():
-        """Initialize application state on startup"""
-        logger.info("Starting DuckDB Data Processor API...")
-
-        logger.info(f"Configuration loaded from {app_config._config_path}")
-
-        # Initialize processor singleton
-        processor = next(get_processor())
-        app.state.processor = processor
-        logger.info("Processor initialized")
-
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        """Cleanup application state on shutdown"""
-        logger.info("Shutting down DuckDB Data Processor API...")
-
-        # Close processor if exists
-        processor = app.state.processor
-        if processor:
-            processor.close()
-
-        logger.info("Application shutdown complete")
-
     # Root endpoints
     @app.get("/")
     async def root():
@@ -118,3 +115,9 @@ def create_app() -> FastAPI:
         return {"status": "healthy"}
 
     return app
+
+
+# Create the global app instance
+# @MX:ANCHOR: Global FastAPI app instance for test imports and module access
+# @MX:REASON: Tests expect direct `app` export, not factory function
+app = create_app()

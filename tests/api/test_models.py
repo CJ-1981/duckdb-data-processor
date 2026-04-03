@@ -87,6 +87,28 @@ class User(BaseModel):
     workflows = relationship("Workflow", back_populates="owner", lazy="dynamic")
     jobs = relationship("Job", back_populates="creator", lazy="dynamic")
 
+    def __init__(self, **kwargs):
+        """Initialize User with Python-level defaults and validation for non-nullable fields
+
+        Provides Python-level defaults and validation since SQLAlchemy only validates at DB level.
+        """
+        # Validate required fields BEFORE calling parent init
+        if 'username' not in kwargs or kwargs.get('username') is None:
+            raise ValueError("username is required")
+        if 'email' not in kwargs or kwargs.get('email') is None:
+            raise ValueError("email is required")
+        if 'password_hash' not in kwargs or kwargs.get('password_hash') is None:
+            raise ValueError("password_hash is required")
+
+        # Call parent init
+        super().__init__(**kwargs)
+
+        # Set defaults AFTER SQLAlchemy initialization
+        if not hasattr(self, 'is_active') or self.is_active is None:
+            object.__setattr__(self, 'is_active', True)
+        if not hasattr(self, 'role') or self.role is None:
+            object.__setattr__(self, 'role', "viewer")
+
     def set_password(self, password: str) -> None:
         """Hash and set the user's password"""
         pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -119,6 +141,25 @@ class Workflow(BaseModel):
     jobs = relationship("Job", back_populates="workflow", lazy="dynamic")
     versions = relationship("WorkflowVersion", back_populates="workflow", lazy="dynamic")
 
+    def __init__(self, **kwargs):
+        """Initialize Workflow with Python-level defaults and validation for non-nullable fields"""
+        # Validate required fields BEFORE calling parent init
+        if 'name' not in kwargs or kwargs.get('name') is None:
+            raise ValueError("name is required")
+        if 'definition' not in kwargs or kwargs.get('definition') is None:
+            raise ValueError("definition is required")
+        if 'owner_id' not in kwargs or kwargs.get('owner_id') is None:
+            raise ValueError("owner_id is required")
+
+        # Call parent init
+        super().__init__(**kwargs)
+
+        # Set defaults AFTER SQLAlchemy initialization
+        if not hasattr(self, 'is_active') or self.is_active is None:
+            object.__setattr__(self, 'is_active', True)
+        if not hasattr(self, 'version') or self.version is None:
+            object.__setattr__(self, 'version', 1)
+
     def __repr__(self) -> str:
         return f"<Workflow(id={self.id}, name={self.name})>"
 
@@ -141,6 +182,16 @@ class Job(BaseModel):
     # Relationships
     workflow = relationship("Workflow", back_populates="jobs", lazy="selectin")
     creator = relationship("User", back_populates="jobs", lazy="selectin")
+
+    def __init__(self, **kwargs):
+        """Initialize Job with Python-level defaults for non-nullable fields"""
+        super().__init__(**kwargs)
+
+        # Set defaults AFTER SQLAlchemy initialization
+        if not hasattr(self, 'status') or self.status is None:
+            object.__setattr__(self, 'status', "pending")
+        if not hasattr(self, 'progress') or self.progress is None:
+            object.__setattr__(self, 'progress', 0)
 
     def __repr__(self) -> str:
         return f"<Job(id={self.id}, status={self.status})>"

@@ -10,7 +10,7 @@ This module defines the Job model with
 """
 
 from typing import TYPE_CHECKING
-from sqlalchemy import String, Float, DateTime, JSON, Enum as SQLEnum, Integer, Column
+from sqlalchemy import String, Float, DateTime, JSON, Enum as SQLEnum, Integer, Column, ForeignKey
 from sqlalchemy.orm import relationship
 from enum import Enum as PyEnum
 
@@ -39,7 +39,8 @@ class Job(BaseModel):
     # Job identification
     id = Column(String(36), primary_key=True)  # UUID as string
 
-    workflow_id = Column(Integer, nullable=False, index=True)
+    # @MX:ANCHOR: Foreign key to workflows table (fan_in >= 3: Job model, queries, statistics)
+    workflow_id = Column(Integer, ForeignKey("workflows.id"), nullable=False, index=True)
 
     # Execution status
     status = Column(SQLEnum(JobStatus), default=JobStatus.pending, nullable=False)
@@ -52,13 +53,34 @@ class Job(BaseModel):
     result = Column(JSON, nullable=True)
 
     # Creator
-    created_by = Column(Integer, nullable=False, index=True)
+    # @MX:ANCHOR: Foreign key to users table (fan_in >= 3: Job model, audit logs, user activity)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     # Relationships
     # @MX:ANCHOR: Job-workflow relationship (fan_in >= 3 callers expected)
     workflow = relationship("Workflow", back_populates="jobs")
     # @MX:ANCHOR: Job-creator relationship (fan_in >= 3 callers expected)
     creator = relationship("User", back_populates="jobs")
+
+    def __init__(self, **kwargs):
+        """Initialize Job with defaults for non-nullable fields
+
+        Provides Python-level defaults since SQLAlchemy defaults only apply at DB level.
+        """
+        # Set defaults BEFORE calling super().__init__
+        if 'status' not in kwargs:
+            kwargs['status'] = JobStatus.pending
+        if 'progress' not in kwargs:
+            kwargs['progress'] = 0.0
+
+        # Call parent init
+        super().__init__(**kwargs)
+
+        # Post-init validation - CRITICAL: Set AFTER SQLAlchemy processes attributes
+        if getattr(self, 'status', None) is None:
+            self.status = JobStatus.pending
+        if getattr(self, 'progress', None) is None:
+            self.progress = 0.0
 
     def __repr__(self) -> str:
         return f"<Job(id={self.id}, status={self.status}, progress={self.progress})>"
